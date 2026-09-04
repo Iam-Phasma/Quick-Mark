@@ -24,4 +24,7 @@ No backend required. All processing runs in the browser.
 ## Notes
 
 - This tool uses CDN versions of PDF.js and PDF-Lib.
+- Both libraries are lazy-loaded at runtime: PDF.js loads on first PDF open, and PDF-Lib loads on export.
+- A service worker caches app files and CDN modules for faster repeat loads.
+- Service worker caching works when served via `http://localhost` or HTTPS (not `file://`).
 - Output file name: quick-mark-output.pdf.

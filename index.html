@@ -54,10 +54,21 @@
           Include auto date
         </label>
 
+        <label class="check">
+          <input id="includeSeparator" type="checkbox" checked />
+          Include separator
+        </label>
+
         <label class="label" for="dateFormat">Date format</label>
         <select id="dateFormat">
-          <option value="iso">YYYY-MM-DD</option>
-          <option value="long">Long format</option>
+          <option value="mmm-dd-yyyy">Sample</option>
+          <option value="mmm-dd-yyyy-upper">Sample</option>
+          <option value="iso">Sample</option>
+          <option value="mm-dd-yyyy">Sample</option>
+          <option value="dd-mm-yyyy">Sample</option>
+          <option value="dd-mmm-yyyy">Sample</option>
+          <option value="dd-mmm-yyyy-upper">Sample</option>
+          <option value="long">Sample</option>
         </select>
 
         <h2>4. Arrange Composition</h2>
@@ -112,7 +123,6 @@
       </div>
     </div>
 
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

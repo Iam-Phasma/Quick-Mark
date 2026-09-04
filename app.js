@@ -18,6 +18,14 @@ import { createPdfViewer } from "./js/pdfViewer.js";
 import { exportMarkedPdf } from "./js/exporter.js";
 import { initComposerEditor } from "./js/composerEditor.js";
 
+if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {
+      // Ignore SW registration failures to keep app functional.
+    });
+  });
+}
+
 const state = createAppState();
 let composerEditor = null;
 
@@ -30,12 +38,20 @@ const COMPOSER_DEFAULTS = {
 
 const setUiStatus = (message, ok = false) => setStatus(els.statusEl, message, ok);
 
+function updateDateFormatOptionSamples() {
+  const options = Array.from(els.dateFormat.options || []);
+  options.forEach((option) => {
+    const formatKey = option.value;
+    option.textContent = getTodayText(formatKey, els.includeSeparator.checked);
+  });
+}
+
 function getPlacementPreviewOptions() {
   return {
     stampDataUrl: state.stampDataUrl,
     signDataUrl: state.signDataUrl,
     includeDate: els.includeDate.checked,
-    dateText: getTodayText(els.dateFormat.value),
+    dateText: getTodayText(els.dateFormat.value, els.includeSeparator.checked),
     stampWidth: state.stampWidth,
     signWidth: state.signWidth * (state.signWidthScale || 1),
     stampAspect: state.stampAspect,
@@ -260,10 +276,17 @@ function bindEvents() {
 
   [
     els.includeDate,
+    els.includeSeparator,
     els.dateFormat,
   ].forEach((control) => {
-    control.addEventListener("input", refreshPreviews);
-    control.addEventListener("change", refreshPreviews);
+    control.addEventListener("input", () => {
+      updateDateFormatOptionSamples();
+      refreshPreviews();
+    });
+    control.addEventListener("change", () => {
+      updateDateFormatOptionSamples();
+      refreshPreviews();
+    });
   });
 
   els.openComposerBtn.addEventListener("click", () => {
@@ -316,6 +339,7 @@ function bindEvents() {
       await exportMarkedPdf({
         state,
         includeDate: els.includeDate,
+        includeSeparator: els.includeSeparator,
         dateFormat: els.dateFormat,
         pdfCanvas: els.pdfCanvas,
         getTodayText,
@@ -331,6 +355,7 @@ function bindEvents() {
 }
 
 setupDropzone();
+updateDateFormatOptionSamples();
 composerEditor = initComposerEditor({
   container: els.layerEditor,
   state,

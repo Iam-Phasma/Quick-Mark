@@ -1,8 +1,16 @@
-const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
+let pdfLibPromise = null;
+
+async function getPdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = import("https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm");
+  }
+  return pdfLibPromise;
+}
 
 export async function exportMarkedPdf({
   state,
   includeDate,
+  includeSeparator,
   dateFormat,
   pdfCanvas,
   getTodayText,
@@ -19,6 +27,8 @@ export async function exportMarkedPdf({
     setStatus("Place at least one mark by clicking on PDF.");
     return;
   }
+
+  const { PDFDocument, rgb, StandardFonts } = await getPdfLib();
 
   const outDoc = await PDFDocument.load(state.pdfBytes);
   const font = await outDoc.embedFont(StandardFonts.Helvetica);
@@ -42,7 +52,7 @@ export async function exportMarkedPdf({
   const boxWidthPreview = Number(composerOptions?.boxWidth ?? 260);
   const boxHeightPreview = Number(composerOptions?.boxHeight ?? 160);
   const previewPadding = Number(composerOptions?.boxPadding ?? 6);
-  const dateText = getTodayText(dateFormat.value);
+  const dateText = getTodayText(dateFormat.value, includeSeparator.checked);
   const dateFontSizePreview = Number(composerOptions?.dateFontSize ?? 12);
   const anchorOffsetPreview = 0;
 

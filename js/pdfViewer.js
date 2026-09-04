@@ -1,7 +1,15 @@
-import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.mjs";
+let pdfjsLibPromise = null;
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs";
+async function getPdfJs() {
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.mjs").then((module) => {
+      module.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs";
+      return module;
+    });
+  }
+  return pdfjsLibPromise;
+}
 
 export function createPdfViewer({
   state,
@@ -103,6 +111,8 @@ export function createPdfViewer({
   }
 
   async function openPdfDocument(bytes) {
+    const pdfjsLib = await getPdfJs();
+
     // PDF.js transfers its input buffer to a worker. Keep the original bytes intact for PDF-Lib export.
     const data = new Uint8Array(bytes.slice(0));
     try {

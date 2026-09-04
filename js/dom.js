@@ -5,6 +5,7 @@ export const els = {
   stampInput: document.getElementById("stampInput"),
   esignInput: document.getElementById("esignInput"),
   includeDate: document.getElementById("includeDate"),
+  includeSeparator: document.getElementById("includeSeparator"),
   dateFormat: document.getElementById("dateFormat"),
   openComposerBtn: document.getElementById("openComposerBtn"),
   composerModal: document.getElementById("composerModal"),

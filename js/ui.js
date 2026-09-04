@@ -5,16 +5,58 @@ export function setStatus(statusEl, message, ok = false) {
 
 const OVERLAY_BOX_OFFSET = 0;
 
-export function getTodayText(formatType) {
+export function getTodayText(formatType, includeSeparator = true) {
   const now = new Date();
-  if (formatType === "iso") {
-    return now.toISOString().slice(0, 10);
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear());
+  const monthShort = new Intl.DateTimeFormat("en-US", { month: "short" }).format(now);
+  const monthShortUpper = monthShort.toUpperCase();
+  const sep = includeSeparator ? "-" : " ";
+
+  if (formatType === "mmm-dd-yyyy") {
+    return `${monthShort}${sep}${day}${sep}${year}`;
   }
-  return new Intl.DateTimeFormat(undefined, {
+
+  if (formatType === "mmm-dd-yyyy-upper") {
+    return `${monthShortUpper}${sep}${day}${sep}${year}`;
+  }
+
+  if (formatType === "iso") {
+    return includeSeparator ? now.toISOString().slice(0, 10) : `${year} ${month} ${day}`;
+  }
+
+  if (formatType === "mm-dd-yyyy") {
+    return `${month}${sep}${day}${sep}${year}`;
+  }
+
+  if (formatType === "dd-mm-yyyy") {
+    return `${day}${sep}${month}${sep}${year}`;
+  }
+
+  if (formatType === "dd-mmm-yyyy") {
+    return `${day}${sep}${monthShort}${sep}${year}`;
+  }
+
+  if (formatType === "dd-mmm-yyyy-upper") {
+    return `${day}${sep}${monthShortUpper}${sep}${year}`;
+  }
+
+  if (includeSeparator) {
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+    }).format(now);
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
     day: "2-digit",
-  }).format(now);
+  })
+    .format(now)
+    .replace(/,/g, "");
 }
 
 export function renderMarkers(overlay, placements, previewOptions = {}) {
