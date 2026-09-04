@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick-Mark</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      (function () {
+        const ua = navigator.userAgent || "";
+        const isPhone = /iPhone|iPod|Android.+Mobile|Windows Phone|BlackBerry|BB10|Opera Mini/i.test(ua);
+        if (isPhone) {
+          document.documentElement.classList.add("phone-blocked");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <section class="phone-block" role="alert" aria-live="polite" aria-label="Desktop only notice">
+      <div class="phone-block-card">
+        <h1>Desktop Only</h1>
+        <p>Quick-Mark is currently available only on desktop or laptop browsers.</p>
+      </div>
+    </section>
+
+    <main class="layout">
+      <section class="panel" aria-label="Mark settings">
+        <h2>1. Upload Files</h2>
+
+        <label class="label" for="pdfInput">PDF Document</label>
+        <div id="pdfDrop" class="dropzone" tabindex="0" role="button" aria-label="Drop PDF here or click to upload">
+          <span id="pdfDropText">Drop PDF here or click to upload</span>
+          <input id="pdfInput" type="file" accept="application/pdf" />
+        </div>
+
+        <label class="label" for="stampInput">Stamp PNG</label>
+        <input id="stampInput" type="file" accept="image/png" />
+
+        <h2>2. E-sign</h2>
+        <label class="label" for="esignInput">Upload E-sign (PNG transparent) or draw below</label>
+        <input id="esignInput" type="file" accept="image/png" />
+
+        <div class="sign-box">
+          <canvas id="signCanvas" width="320" height="120" aria-label="Draw signature"></canvas>
+          <div class="row">
+            <button id="clearSignBtn" type="button">Clear</button>
+            <button id="useSignDrawingBtn" type="button">Use Drawing</button>
+          </div>
+        </div>
+
+        <h2>3. Date and Size</h2>
+        <label class="check">
+          <input id="includeDate" type="checkbox" checked />
+          Include auto date
+        </label>
+
+        <label class="label" for="dateFormat">Date format</label>
+        <select id="dateFormat">
+          <option value="iso">YYYY-MM-DD</option>
+          <option value="long">Long format</option>
+        </select>
+
+        <label class="label" for="stampSize">Stamp width (px on preview)</label>
+        <input id="stampSize" type="range" min="60" max="300" value="140" />
+
+        <label class="label" for="signSize">E-sign width (px on preview)</label>
+        <input id="signSize" type="range" min="80" max="360" value="180" />
+
+        <h2>4. Composer</h2>
+        <p class="hint">Open editor to arrange stamp, date, and e-sign with overlap.</p>
+        <button id="openComposerBtn" type="button">Open Composer Editor</button>
+
+        <h2>5. Place and Export</h2>
+        <p class="hint">After files are set, click on the PDF page where the mark should appear.</p>
+        <button id="clearPlacementsBtn" type="button">Clear placements</button>
+        <button id="exportBtn" type="button" class="primary">Export Marked PDF</button>
+
+        <p id="status" class="status" role="status" aria-live="polite">Waiting for PDF.</p>
+      </section>
+
+      <section class="viewer" aria-label="PDF viewer">
+        <div class="viewer-toolbar">
+          <button id="prevPageBtn" type="button">Prev</button>
+          <span id="pageInfo">Page 0 / 0</span>
+          <button id="nextPageBtn" type="button">Next</button>
+        </div>
+
+        <div id="pdfStage" class="pdf-stage">
+          <div id="pdfLayer" class="pdf-layer">
+            <canvas id="pdfCanvas" aria-label="PDF page preview"></canvas>
+            <div id="overlay" class="overlay" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="composerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="composerTitle">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <h2 id="composerTitle">Composer Editor</h2>
+          <button id="closeComposerBtn" type="button">Close</button>
+        </div>
+
+        <p class="hint">Drag layers to reorder. Drag elements in the preview or use X/Y values for precise overlap.</p>
+        <div class="composer-layout">
+          <div id="composerPreview" class="composer-preview" aria-label="Composer live preview"></div>
+
+          <div class="composer-controls">
+            <div class="component-editor">
+              <h3>Components</h3>
+              <div id="layerEditor" class="layer-editor" aria-label="Layer hierarchy editor"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
