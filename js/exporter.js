@@ -38,7 +38,7 @@ export async function exportMarkedPdf({
   }
 
   const stampWPreview = Number(stampSize.value);
-  const signWPreview = Number(signSize.value);
+  const signWPreview = Number(composerOptions?.signWidth ?? signSize.value);
   const previewLayerOrder = composerOptions?.layerOrder || ["stamp", "date", "sign"];
   const layerTransforms = composerOptions?.layerTransforms || {};
   const boxWidthPreview = Number(composerOptions?.boxWidth ?? 260);
