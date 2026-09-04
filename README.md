@@ -1,42 +1,20 @@
-# Quick-Mark
+# Quick Mark
 
-Simple client-side PDF stamping tool for government-use workflows.
+Quick Mark is a fast, desktop-first PDF stamping app built for individuals that need clean, repeatable document marking without complexity.
 
-## What It Does
+## Why Quick Mark
 
-- Upload or drag-and-drop a PDF.
-- Upload a stamp PNG.
-- Upload an e-sign PNG or draw an e-sign directly in the browser.
-- Auto-include current date.
-- Click on the PDF page to place your mark.
-- Export a new marked PDF locally.
+- Speed-first workflow from upload to export.
+- Professional, consistent stamp composition with date and e-sign layering.
+- Precise visual control with live positioning and component ordering.
+- Built for practical, high-volume document handling.
 
-No backend required. All processing runs in the browser.
+## Core Features
 
-## Run
+- Drag-and-drop PDF intake.
+- Stamp PNG upload.
+- E-sign support via upload or in-browser drawing.
+- Flexible date formats with optional separators.
+- Composer Editor for layer ordering, offsets, and sizing.
+- One-click export to a finalized marked PDF.
 
-1. Open this folder in VS Code.
-2. Install dependencies: `npm install`
-3. Start dev server: `npm run dev`
-4. Use the left panel to upload stamp/e-sign/date options.
-5. Click on the PDF preview to place marks.
-6. Click Export Marked PDF.
-
-## Build
-
-1. Run: `npm run build`
-2. Static output is generated in `dist/`.
-
-## Deploy (GitHub Pages)
-
-1. Push to `main`.
-2. GitHub Actions workflow `.github/workflows/deploy-pages.yml` builds and deploys `dist/`.
-3. In repository settings, set Pages source to `GitHub Actions`.
-
-## Notes
-
-- This tool uses CDN versions of PDF.js and PDF-Lib.
-- Both libraries are lazy-loaded at runtime: PDF.js loads on first PDF open, and PDF-Lib loads on export.
-- A service worker caches app files and CDN modules for faster repeat loads.
-- Service worker caching works when served via `http://localhost` or HTTPS (not `file://`).
-- Output file name: quick-mark-output.pdf.

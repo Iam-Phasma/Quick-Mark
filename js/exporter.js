@@ -163,14 +163,14 @@ export async function exportMarkedPdf({
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = "quick-mark-output.pdf";
+  a.download = "quickmark-output.pdf";
   a.style.display = "none";
   document.body.appendChild(a);
   a.click();
   a.remove();
 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  setStatus("Export complete: quick-mark-output.pdf", true);
+  setStatus("Export complete: quickmark-output.pdf", true);
 }
 
 function createDateMetrics({ text, font, fontSize }) {
