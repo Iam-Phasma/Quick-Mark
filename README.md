@@ -2,6 +2,8 @@
 
 Quick Mark is a fast, desktop-first PDF stamping app built for individuals that need clean, repeatable document marking without complexity.
 
+Open: https://iam-phasma.github.io/Quick-Mark/
+
 ## Why Quick Mark
 
 - Speed-first workflow from upload to export.
