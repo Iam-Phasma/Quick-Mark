@@ -219,15 +219,22 @@ button.primary:hover {
   border-radius: 6px;
   background: #ffffff;
   overflow: hidden;
-  cursor: grab;
+  cursor: default;
+  transition: opacity 0.14s ease, box-shadow 0.18s ease;
+  will-change: transform;
 }
 
 .component-card:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .component-card.is-dragging {
-  opacity: 0.55;
+  opacity: 0.45;
+  box-shadow: 0 8px 20px rgba(16, 35, 51, 0.2);
+}
+
+.component-card.is-drag-source {
+  opacity: 0;
 }
 
 .component-card.is-drop-target {
@@ -306,23 +313,14 @@ button.primary:hover {
 .composer-controls {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   overflow: visible;
   max-width: 660px;
 }
 
-.component-editor,
-.box-controls {
-  min-width: 0;
-}
-
-.box-controls {
-  order: 1;
-}
-
 .component-editor {
-  order: 2;
+  min-width: 0;
 }
 
 .component-editor h3 {
@@ -332,41 +330,10 @@ button.primary:hover {
   font-weight: 700;
 }
 
-.box-controls {
-  align-self: start;
-  border: 1px solid #d9e2ea;
-  border-radius: 6px;
-  background: #ffffff;
-  padding: 10px 12px 12px;
-}
-
-.box-controls h3 {
-  margin: 0 0 8px;
-  color: #40576b;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
 .layer-editor {
   max-height: none;
   overflow: visible;
   padding-right: 0;
-}
-
-.box-controls .label {
-  margin-top: 8px;
-  font-size: 0.88rem;
-  color: #2c4256;
-}
-
-.box-controls .label:first-of-type {
-  margin-top: 0;
-}
-
-.box-controls input[type="range"] {
-  display: block;
-  width: 100%;
-  min-width: 0;
 }
 
 .composer-preview .placement-preview {
@@ -432,6 +399,12 @@ button.primary:hover {
   font-weight: 700;
   letter-spacing: 1px;
   min-width: 16px;
+  cursor: grab;
+  user-select: none;
+}
+
+.layer-handle:active {
+  cursor: grabbing;
 }
 
 .layer-name {
@@ -442,15 +415,15 @@ button.primary:hover {
 
 .layer-controls {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 8px;
   padding: 9px 10px;
   background: #ffffff;
 }
 
 .axis-control {
   display: grid;
-  grid-template-columns: minmax(96px, 1fr) 64px;
+  grid-template-columns: minmax(0, 1fr) 56px;
   align-items: center;
   gap: 3px 8px;
 }
@@ -467,7 +440,7 @@ button.primary:hover {
 }
 
 .axis-number {
-  width: 64px;
+  width: 56px;
   font: inherit;
   font-size: 0.82rem;
   border: 1px solid #c6d2dd;
@@ -488,7 +461,7 @@ button.primary:hover {
 }
 
 .layer-controls input[type="range"],
-.box-controls input[type="range"] {
+.axis-control input[type="range"] {
   accent-color: #005ea2;
 }
 
@@ -667,6 +640,7 @@ button.primary:hover {
   line-height: 1.2;
   color: #0f2233;
   white-space: nowrap;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 .placement-sign {
@@ -732,6 +706,10 @@ button.primary:hover {
     overflow: visible;
     gap: 10px;
     padding-right: 0;
+  }
+
+  .layer-controls {
+    grid-template-columns: 1fr;
   }
 
   .axis-control {

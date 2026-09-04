@@ -201,7 +201,7 @@ function getContentBounds(previewOptions = {}) {
     stampWidth = 140,
     signWidth = 180,
     dateFontSize = 12,
-    layerOrder = ["stamp", "date", "sign"],
+    layerOrder = ["sign", "date", "stamp"],
     layerTransforms = {},
     boxWidth = 260,
     boxHeight = 160,
@@ -259,7 +259,8 @@ export function renderComposerPreview(container, previewOptions = {}) {
   const boxWidth = Number(previewOptions.boxWidth ?? 260);
   const boxHeight = Number(previewOptions.boxHeight ?? 160);
   container.style.width = `${boxWidth + 2}px`;
-  container.style.height = `${boxHeight + 2}px`;
+  container.style.height = "";
+  container.style.minHeight = `${boxHeight + 2}px`;
 
   const preview = document.createElement("div");
   preview.className = "placement-preview";
@@ -290,7 +291,7 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
     stampWidth = 140,
     signWidth = 180,
     dateFontSize = 12,
-    layerOrder = ["stamp", "date", "sign"],
+    layerOrder = ["sign", "date", "stamp"],
     layerTransforms = {},
     boxWidth = 260,
     boxHeight = 160,
@@ -306,7 +307,8 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
   box.style.padding = `${boxPadding}px`;
   box.style.setProperty("--composer-padding", `${boxPadding}px`);
 
-  for (const layer of layerOrder) {
+  // Stack semantics: first item in layerOrder is frontmost, so draw in reverse.
+  for (const layer of [...layerOrder].reverse()) {
     const offset = layerTransforms[layer] || { x: 0, y: 0 };
     const layerEl = createLayerElement({
       layer,

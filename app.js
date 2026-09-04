@@ -36,11 +36,11 @@ function getPlacementPreviewOptions() {
     signDataUrl: state.signDataUrl,
     includeDate: els.includeDate.checked,
     dateText: getTodayText(els.dateFormat.value),
-    stampWidth: Number(els.stampSize.value),
-    signWidth: Number(els.signSize.value) * (state.signWidthScale || 1),
+    stampWidth: state.stampWidth,
+    signWidth: state.signWidth * (state.signWidthScale || 1),
     stampAspect: state.stampAspect,
     signAspect: state.signAspect,
-    dateFontSize: COMPOSER_DEFAULTS.dateFontSize,
+    dateFontSize: state.dateFontSize ?? COMPOSER_DEFAULTS.dateFontSize,
     layerOrder: state.layerOrder,
     layerTransforms: state.layerTransforms,
     boxWidth: COMPOSER_DEFAULTS.boxWidth,
@@ -152,6 +152,20 @@ function refreshPreviews() {
   const options = getPlacementPreviewOptions();
   renderMarkers(els.overlay, getPagePlacements(state, state.currentPage), options);
   renderComposerPreview(els.composerPreview, options);
+  syncComposerPreviewVisualHeight();
+}
+
+function syncComposerPreviewVisualHeight() {
+  const baseHeight = COMPOSER_DEFAULTS.boxHeight + 2;
+  const editorRect = els.layerEditor?.getBoundingClientRect();
+  const editorHeight = Math.ceil(editorRect?.height || 0);
+
+  if (editorHeight > 0) {
+    els.composerPreview.style.minHeight = `${Math.max(baseHeight, editorHeight)}px`;
+    return;
+  }
+
+  els.composerPreview.style.minHeight = `${baseHeight}px`;
 }
 
 const viewer = createPdfViewer({
@@ -227,8 +241,8 @@ function bindEvents() {
     }
 
     const placements = getPagePlacements(state, state.currentPage);
-    if (placements.length >= 2) {
-      setUiStatus(`Maximum of 2 marks allowed on page ${state.currentPage}.`);
+    if (placements.length >= 1) {
+      setUiStatus(`Only 1 stamp mark is allowed on page ${state.currentPage}.`);
       return;
     }
 
@@ -247,8 +261,6 @@ function bindEvents() {
   [
     els.includeDate,
     els.dateFormat,
-    els.stampSize,
-    els.signSize,
   ].forEach((control) => {
     control.addEventListener("input", refreshPreviews);
     control.addEventListener("change", refreshPreviews);
@@ -256,6 +268,9 @@ function bindEvents() {
 
   els.openComposerBtn.addEventListener("click", () => {
     els.composerModal.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      syncComposerPreviewVisualHeight();
+    });
   });
 
   els.closeComposerBtn.addEventListener("click", () => {
@@ -272,6 +287,10 @@ function bindEvents() {
     if (event.key === "Escape") {
       els.composerModal.classList.add("hidden");
     }
+  });
+
+  window.addEventListener("resize", () => {
+    syncComposerPreviewVisualHeight();
   });
 
   els.prevPageBtn.addEventListener("click", async () => {
@@ -298,8 +317,6 @@ function bindEvents() {
         state,
         includeDate: els.includeDate,
         dateFormat: els.dateFormat,
-        stampSize: els.stampSize,
-        signSize: els.signSize,
         pdfCanvas: els.pdfCanvas,
         getTodayText,
         totalPlacementCount,
@@ -317,6 +334,26 @@ setupDropzone();
 composerEditor = initComposerEditor({
   container: els.layerEditor,
   state,
+  getLayerSize: (layer) => {
+    if (layer === "stamp") {
+      return state.stampWidth;
+    }
+    if (layer === "sign") {
+      return state.signWidth;
+    }
+    return state.dateFontSize;
+  },
+  setLayerSize: (layer, value) => {
+    if (layer === "stamp") {
+      state.stampWidth = value;
+      return;
+    }
+    if (layer === "sign") {
+      state.signWidth = value;
+      return;
+    }
+    state.dateFontSize = value;
+  },
   onChange: refreshPreviews,
 });
 initSignaturePad({

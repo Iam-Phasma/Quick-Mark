@@ -4,8 +4,6 @@ export async function exportMarkedPdf({
   state,
   includeDate,
   dateFormat,
-  stampSize,
-  signSize,
   pdfCanvas,
   getTodayText,
   totalPlacementCount,
@@ -37,9 +35,9 @@ export async function exportMarkedPdf({
     signImage = await outDoc.embedPng(bytes);
   }
 
-  const stampWPreview = Number(stampSize.value);
-  const signWPreview = Number(composerOptions?.signWidth ?? signSize.value);
-  const previewLayerOrder = composerOptions?.layerOrder || ["stamp", "date", "sign"];
+  const stampWPreview = Number(composerOptions?.stampWidth ?? 140);
+  const signWPreview = Number(composerOptions?.signWidth ?? 180);
+  const previewLayerOrder = composerOptions?.layerOrder || ["sign", "date", "stamp"];
   const layerTransforms = composerOptions?.layerTransforms || {};
   const boxWidthPreview = Number(composerOptions?.boxWidth ?? 260);
   const boxHeightPreview = Number(composerOptions?.boxHeight ?? 160);
@@ -73,11 +71,11 @@ export async function exportMarkedPdf({
       : null;
 
     const dateMetrics = includeDate.checked
-      ? {
-          width: estimateDateWidth(dateText, dateFontSizePreview) * scale,
-          height: (dateFontSizePreview + 6) * scale,
+      ? createDateMetrics({
+          text: dateText,
+          font,
           fontSize: Math.max(9, dateFontSizePreview * scale),
-        }
+        })
       : null;
 
     for (const mark of marks) {
@@ -85,7 +83,8 @@ export async function exportMarkedPdf({
       const boxTop = mark.y * height + anchorOffsetPreview * scale;
 
       // Keep composer content bounded to the configured box area in export.
-      for (const layer of previewLayerOrder) {
+      // Stack semantics: first item in layerOrder is frontmost, so draw in reverse.
+      for (const layer of [...previewLayerOrder].reverse()) {
         const offset = layerTransforms[layer] || { x: 0, y: 0 };
         const metrics =
           layer === "stamp"
@@ -135,10 +134,10 @@ export async function exportMarkedPdf({
           if (layerX > boxX + boxWidth || layerTop > boxTop + boxHeight) {
             continue;
           }
-          const layerBottom = height - (layerTop + dateMetrics.height);
+          const baselineY = height - layerTop - dateMetrics.ascent;
           page.drawText(dateText, {
             x: layerX + 2 * scale,
-            y: layerBottom + 2 * scale,
+            y: baselineY,
             size: dateMetrics.fontSize,
             font,
             color: rgb(0.05, 0.1, 0.15),
@@ -164,6 +163,16 @@ export async function exportMarkedPdf({
   setStatus("Export complete: quick-mark-output.pdf", true);
 }
 
-function estimateDateWidth(text, fontSizePx) {
-  return text.length * (fontSizePx * 0.58) + 8;
+function createDateMetrics({ text, font, fontSize }) {
+  const safeSize = Math.max(1, Number(fontSize) || 12);
+  const width = font.widthOfTextAtSize(text, safeSize);
+  const fullHeight = font.heightAtSize(safeSize);
+  const ascent = font.heightAtSize(safeSize, { descender: false });
+
+  return {
+    width,
+    height: fullHeight,
+    ascent,
+    fontSize: safeSize,
+  };
 }

@@ -6,8 +6,6 @@ export const els = {
   esignInput: document.getElementById("esignInput"),
   includeDate: document.getElementById("includeDate"),
   dateFormat: document.getElementById("dateFormat"),
-  stampSize: document.getElementById("stampSize"),
-  signSize: document.getElementById("signSize"),
   openComposerBtn: document.getElementById("openComposerBtn"),
   composerModal: document.getElementById("composerModal"),
   closeComposerBtn: document.getElementById("closeComposerBtn"),
