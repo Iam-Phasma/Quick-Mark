@@ -16,10 +16,22 @@ No backend required. All processing runs in the browser.
 ## Run
 
 1. Open this folder in VS Code.
-2. Open [index.html](index.html) in a browser.
-3. Use the left panel to upload stamp/e-sign/date options.
-4. Click on the PDF preview to place marks.
-5. Click Export Marked PDF.
+2. Install dependencies: `npm install`
+3. Start dev server: `npm run dev`
+4. Use the left panel to upload stamp/e-sign/date options.
+5. Click on the PDF preview to place marks.
+6. Click Export Marked PDF.
+
+## Build
+
+1. Run: `npm run build`
+2. Static output is generated in `dist/`.
+
+## Deploy (GitHub Pages)
+
+1. Push to `main`.
+2. GitHub Actions workflow `.github/workflows/deploy-pages.yml` builds and deploys `dist/`.
+3. In repository settings, set Pages source to `GitHub Actions`.
 
 ## Notes
 

@@ -20,7 +20,9 @@ import { initComposerEditor } from "./js/composerEditor.js";
 
 if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {
+    const baseUrl = import.meta.env?.BASE_URL || "./";
+    const swUrl = `${baseUrl}sw.js`;
+    navigator.serviceWorker.register(swUrl).catch(() => {
       // Ignore SW registration failures to keep app functional.
     });
   });
