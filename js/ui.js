@@ -10,7 +10,9 @@ export function getTodayText(formatType, includeSeparator = true) {
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = String(now.getFullYear());
-  const monthShort = new Intl.DateTimeFormat("en-US", { month: "short" }).format(now);
+  const monthShort = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+  }).format(now);
   const monthShortUpper = monthShort.toUpperCase();
   const sep = includeSeparator ? "-" : " ";
 
@@ -23,7 +25,9 @@ export function getTodayText(formatType, includeSeparator = true) {
   }
 
   if (formatType === "iso") {
-    return includeSeparator ? now.toISOString().slice(0, 10) : `${year} ${month} ${day}`;
+    return includeSeparator
+      ? now.toISOString().slice(0, 10)
+      : `${year} ${month} ${day}`;
   }
 
   if (formatType === "mm-dd-yyyy") {
@@ -64,7 +68,11 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
   const { onRemovePlacement } = previewOptions;
 
   placements.forEach((point, index) => {
-    const boundedStart = clampPlacementToOverlay(point, overlay, previewOptions);
+    const boundedStart = clampPlacementToOverlay(
+      point,
+      overlay,
+      previewOptions,
+    );
     placements[index].x = boundedStart.x;
     placements[index].y = boundedStart.y;
 
@@ -79,7 +87,9 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
 
     const box = buildCompositionBox(previewOptions, "overlay");
     const hasVisualContent = box.childElementCount > 0;
-    const contentBounds = hasVisualContent ? getContentBounds(previewOptions) : null;
+    const contentBounds = hasVisualContent
+      ? getContentBounds(previewOptions)
+      : null;
 
     let hook = null;
     let remove = null;
@@ -90,10 +100,9 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
 
       remove = document.createElement("button");
       remove.type = "button";
-      remove.className = "placement-remove placement-remove-content";
+      remove.className = "close-btn placement-remove-content";
       remove.setAttribute("aria-label", "Remove placed mark");
       remove.title = "Remove mark";
-      remove.textContent = "x";
       if (contentBounds) {
         // Keep remove near the mark, but outside constrained mark bounds.
         remove.style.left = `${contentBounds.maxX + 12}px`;
@@ -111,10 +120,9 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
 
       remove = document.createElement("button");
       remove.type = "button";
-      remove.className = "placement-remove";
+      remove.className = "close-btn";
       remove.setAttribute("aria-label", "Remove placed mark");
       remove.title = "Remove mark";
-      remove.textContent = "x";
       preview.appendChild(remove);
     }
 
@@ -159,7 +167,7 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
             y: startPointY + dy,
           },
           overlay,
-          previewOptions
+          previewOptions,
         );
 
         placements[index].x = next.x;
@@ -220,13 +228,15 @@ function clampPlacementToOverlay(point, overlay, previewOptions = {}) {
   const currentX = point.x * rect.width;
   const currentY = point.y * rect.height;
 
-  const clampedX = minAnchorX <= maxAnchorX
-    ? clamp(currentX, minAnchorX, maxAnchorX)
-    : rect.width / 2 - (contentBounds.minX + contentBounds.maxX) / 2;
+  const clampedX =
+    minAnchorX <= maxAnchorX
+      ? clamp(currentX, minAnchorX, maxAnchorX)
+      : rect.width / 2 - (contentBounds.minX + contentBounds.maxX) / 2;
 
-  const clampedY = minAnchorY <= maxAnchorY
-    ? clamp(currentY, minAnchorY, maxAnchorY)
-    : rect.height / 2 - (contentBounds.minY + contentBounds.maxY) / 2;
+  const clampedY =
+    minAnchorY <= maxAnchorY
+      ? clamp(currentY, minAnchorY, maxAnchorY)
+      : rect.height / 2 - (contentBounds.minY + contentBounds.maxY) / 2;
 
   return {
     x: clampedX / rect.width,
@@ -317,7 +327,8 @@ export function renderComposerPreview(container, previewOptions = {}) {
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "composer-placeholder";
-    placeholder.textContent = "Upload stamp/e-sign or enable date to preview composition.";
+    placeholder.textContent =
+      "Upload stamp/e-sign or enable date to preview composition.";
     preview.appendChild(placeholder);
   }
 
