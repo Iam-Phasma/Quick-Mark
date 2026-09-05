@@ -3,6 +3,10 @@ export const els = {
   pdfDrop: document.getElementById("pdfDrop"),
   pdfDropText: document.getElementById("pdfDropText"),
   stampInput: document.getElementById("stampInput"),
+  signInputSwitch: document.getElementById("signInputSwitch"),
+  signAttachmentPane: document.getElementById("signAttachmentPane"),
+  signDrawingPane: document.getElementById("signDrawingPane"),
+  signPenStyleGroup: document.getElementById("signPenStyleGroup"),
   esignInput: document.getElementById("esignInput"),
   includeDate: document.getElementById("includeDate"),
   includeSeparator: document.getElementById("includeSeparator"),
@@ -32,7 +36,6 @@ export const els = {
   overlay: document.getElementById("overlay"),
   signCanvas: document.getElementById("signCanvas"),
   clearSignBtn: document.getElementById("clearSignBtn"),
-  useSignDrawingBtn: document.getElementById("useSignDrawingBtn"),
 };
 
 export const pdfCtx = els.pdfCanvas.getContext("2d");

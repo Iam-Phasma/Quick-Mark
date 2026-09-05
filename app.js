@@ -35,6 +35,7 @@ if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
 const state = createAppState();
 let composerEditor = null;
 let signaturePadApi = null;
+let signInputSwitcherApi = null;
 
 const COMPOSER_DEFAULTS = {
   boxWidth: 260,
@@ -141,6 +142,55 @@ function syncStyleControlsUi() {
   els.dateFontFamily.style.fontFamily = resolveDateFontCss(state.dateFontFamily);
 
   signaturePadApi?.setPenColor(penInk);
+}
+
+function initSignInputSwitcher() {
+  const switcher = els.signInputSwitch;
+  if (!switcher) {
+    return;
+  }
+
+  const buttons = Array.from(switcher.querySelectorAll("button[data-sign-mode]"));
+  const attachmentPane = els.signAttachmentPane;
+  const drawingPane = els.signDrawingPane;
+  const penStyleGroup = els.signPenStyleGroup;
+
+  const setMode = (mode) => {
+    const safeMode = mode === "drawing" ? "drawing" : "attachment";
+    const index = safeMode === "drawing" ? 1 : 0;
+
+    buttons.forEach((button) => {
+      const isActive = button.dataset.signMode === safeMode;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+
+    if (attachmentPane) {
+      attachmentPane.hidden = safeMode !== "attachment";
+    }
+
+    if (drawingPane) {
+      drawingPane.hidden = safeMode !== "drawing";
+    }
+
+    if (penStyleGroup) {
+      penStyleGroup.hidden = safeMode !== "drawing";
+    }
+
+    switcher.style.setProperty("--sign-mode-index", String(index));
+  };
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setMode(button.dataset.signMode || "attachment");
+    });
+  });
+
+  setMode("attachment");
+
+  return {
+    setMode,
+  };
 }
 
 function initAssetSwitcher() {
@@ -397,6 +447,7 @@ function setupDropzone() {
 }
 
 function bindEvents() {
+  signInputSwitcherApi = initSignInputSwitcher();
   let isFitViewEnabled = false;
 
   els.pdfInput.addEventListener("change", (event) => {
@@ -433,6 +484,7 @@ function bindEvents() {
       state.signDataUrl = trimmedSign.dataUrl;
       state.signAspect = trimmedSign.aspect;
       state.signWidthScale = trimmedSign.widthScale;
+      signInputSwitcherApi?.setMode("attachment");
       refreshPreviews();
       setUiStatus("E-sign PNG loaded and trimmed.", true);
     } catch (error) {
@@ -633,7 +685,6 @@ signaturePadApi = initSignaturePad({
   signCanvas: els.signCanvas,
   signCtx,
   clearSignBtn: els.clearSignBtn,
-  useSignDrawingBtn: els.useSignDrawingBtn,
   setStatus: setUiStatus,
   getPenColor: () => resolveToneCssColor(state.penTone, state.penSaturation),
   onUseDrawing: (drawingDataUrl) => {
@@ -641,6 +692,7 @@ signaturePadApi = initSignaturePad({
       state.signDataUrl = trimmedSign.dataUrl;
       state.signAspect = trimmedSign.aspect;
       state.signWidthScale = trimmedSign.widthScale;
+      signInputSwitcherApi?.setMode("drawing");
       refreshPreviews();
     });
   },

@@ -2,7 +2,6 @@ export function initSignaturePad({
   signCanvas,
   signCtx,
   clearSignBtn,
-  useSignDrawingBtn,
   setStatus,
   getPenColor,
   onUseDrawing,
@@ -57,6 +56,9 @@ export function initSignaturePad({
   };
 
   const end = () => {
+    if (drawState.active && drawState.hadStroke) {
+      onUseDrawing(signCanvas.toDataURL("image/png"));
+    }
     drawState.active = false;
   };
 
@@ -108,16 +110,6 @@ export function initSignaturePad({
     clearSignatureCanvas(signCtx, signCanvas);
     drawState.hadStroke = false;
     setStatus("Signature drawing cleared.");
-  });
-
-  useSignDrawingBtn.addEventListener("click", () => {
-    if (!drawState.hadStroke) {
-      setStatus("Draw a signature first or upload PNG.");
-      return;
-    }
-
-    onUseDrawing(signCanvas.toDataURL("image/png"));
-    setStatus("Using drawn signature.", true);
   });
 
   return {
