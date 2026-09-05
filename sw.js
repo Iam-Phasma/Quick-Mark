@@ -1,9 +1,6 @@
 const CACHE_NAME = "quickmark-v5";
 
-const LOCAL_ASSETS = [
-  "./",
-  "./index.html",
-];
+const LOCAL_ASSETS = ["./", "./index.html"];
 
 const CDN_ASSETS = new Set([
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.mjs",
@@ -26,9 +23,9 @@ self.addEventListener("install", (event) => {
           } catch {
             // Ignore CDN warm-up failures; runtime fetch will still work.
           }
-        })
+        }),
       );
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -42,9 +39,9 @@ self.addEventListener("activate", (event) => {
             return caches.delete(key);
           }
           return Promise.resolve();
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
   self.clients.claim();
 });
