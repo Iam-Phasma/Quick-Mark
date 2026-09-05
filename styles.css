@@ -504,9 +504,9 @@ button.primary:disabled:hover {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  padding: 10px;
+  padding: 10px 88px 10px 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -519,6 +519,26 @@ button.primary:disabled:hover {
   position: absolute;
   right: 10px;
   margin-top: 0;
+}
+
+#fitViewToggle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 6px;
+  display: grid;
+  place-items: center;
+}
+
+#fitViewToggle img {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+#fitViewToggle.is-active {
+  border-color: var(--action);
+  background: #e8f2fb;
 }
 
 .pdf-stage {

@@ -41,6 +41,15 @@ const COMPOSER_DEFAULTS = {
 const setUiStatus = (message, ok = false) =>
   setStatus(els.statusEl, message, ok);
 
+function syncFitToggleUi(isFitEnabled) {
+  els.fitViewToggle.setAttribute("aria-pressed", String(isFitEnabled));
+  els.fitViewToggle.setAttribute(
+    "title",
+    isFitEnabled ? "Fit to screen: On" : "Fit to screen: Off",
+  );
+  els.fitViewToggle.classList.toggle("is-active", isFitEnabled);
+}
+
 function updateExportButton() {
   els.exportBtn.disabled = !state.pdfDoc || totalPlacementCount(state) === 0;
 }
@@ -208,6 +217,7 @@ function syncComposerPreviewVisualHeight() {
 
 const viewer = createPdfViewer({
   state,
+  pdfStage: els.pdfStage,
   pdfCanvas: els.pdfCanvas,
   pdfCtx,
   overlay: els.overlay,
@@ -244,8 +254,16 @@ function setupDropzone() {
 }
 
 function bindEvents() {
+  let isFitViewEnabled = false;
+
   els.pdfInput.addEventListener("change", (event) => {
     viewer.loadPdf(event.target.files?.[0]);
+  });
+
+  els.fitViewToggle.addEventListener("click", async () => {
+    isFitViewEnabled = !isFitViewEnabled;
+    syncFitToggleUi(isFitViewEnabled);
+    await viewer.setFitToScreen(isFitViewEnabled);
   });
 
   els.stampInput.addEventListener("change", async (event) => {
@@ -343,6 +361,7 @@ function bindEvents() {
 
   window.addEventListener("resize", () => {
     syncComposerPreviewVisualHeight();
+    viewer.handleViewportChange();
   });
 
   els.prevPageBtn.addEventListener("click", async () => {
@@ -385,6 +404,7 @@ function bindEvents() {
 }
 
 setupDropzone();
+syncFitToggleUi(false);
 updateDateFormatOptionSamples();
 composerEditor = initComposerEditor({
   container: els.layerEditor,
