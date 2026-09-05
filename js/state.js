@@ -14,6 +14,7 @@ export function createAppState() {
     penSaturation: 100,
     dateFontSize: 12,
     dateFontFamily: "sans",
+    dateFontWeight: "500",
     dateTone: "black",
     dateSaturation: 100,
     layerOrder: ["sign", "date", "stamp"],

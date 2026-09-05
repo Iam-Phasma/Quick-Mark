@@ -11,6 +11,7 @@ export const els = {
   penSaturation: document.getElementById("penSaturation"),
   penSaturationValue: document.getElementById("penSaturationValue"),
   dateFontFamily: document.getElementById("dateFontFamily"),
+  dateFontWeight: document.getElementById("dateFontWeight"),
   dateColorChoices: document.getElementById("dateColorChoices"),
   dateSaturation: document.getElementById("dateSaturation"),
   dateSaturationValue: document.getElementById("dateSaturationValue"),

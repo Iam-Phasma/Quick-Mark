@@ -33,7 +33,10 @@ export async function exportMarkedPdf({
   const { PDFDocument, rgb, StandardFonts } = await getPdfLib();
 
   const outDoc = await PDFDocument.load(state.pdfBytes);
-  const dateFontName = resolveDatePdfFontName(composerOptions?.dateFontKey);
+  const dateFontName = resolveDatePdfFontName(
+    composerOptions?.dateFontKey,
+    composerOptions?.dateFontWeight,
+  );
   const selectedDateFont = StandardFonts[dateFontName] || StandardFonts.Helvetica;
   const font = await outDoc.embedFont(selectedDateFont);
 

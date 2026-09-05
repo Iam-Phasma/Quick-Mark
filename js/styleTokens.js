@@ -12,15 +12,38 @@ const TONE_CONFIG = {
 const FONT_CONFIG = {
   sans: {
     css: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-    pdf: "Helvetica",
+    pdfRegular: "Helvetica",
+    pdfBold: "HelveticaBold",
   },
   serif: {
     css: '"Times New Roman", Times, serif',
-    pdf: "TimesRoman",
+    pdfRegular: "TimesRoman",
+    pdfBold: "TimesRomanBold",
   },
   mono: {
     css: '"Courier New", Courier, monospace',
-    pdf: "Courier",
+    pdfRegular: "Courier",
+    pdfBold: "CourierBold",
+  },
+  "ui-sans": {
+    css: 'system-ui, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    pdfRegular: "Helvetica",
+    pdfBold: "HelveticaBold",
+  },
+  "ui-serif": {
+    css: 'ui-serif, Georgia, "Times New Roman", Times, serif',
+    pdfRegular: "TimesRoman",
+    pdfBold: "TimesRomanBold",
+  },
+  rounded: {
+    css: '"Arial Rounded MT Bold", "Helvetica Rounded", "Trebuchet MS", sans-serif',
+    pdfRegular: "Helvetica",
+    pdfBold: "HelveticaBold",
+  },
+  narrow: {
+    css: '"Arial Narrow", "HelveticaNeue-CondensedBold", "Roboto Condensed", Arial, sans-serif',
+    pdfRegular: "Helvetica",
+    pdfBold: "HelveticaBold",
   },
 };
 
@@ -34,24 +57,27 @@ function getToneConfig(toneKey) {
 
 export function resolveToneCssColor(toneKey = "black", saturationPercent = 100) {
   const tone = getToneConfig(toneKey);
+  const safeSat = clamp(Number(saturationPercent) || 100, 0, 100);
 
   if (tone.isNeutral) {
-    return `hsl(${tone.hue} 10% ${tone.lightness}%)`;
+    // For neutral ink, use slider as density: light gray -> black.
+    const neutralLightness = Math.round(72 - safeSat * 0.6);
+    return `hsl(${tone.hue} 4% ${neutralLightness}%)`;
   }
 
-  const safeSat = clamp(Number(saturationPercent) || 100, 0, 100);
   const sat = Math.round(22 + safeSat * 0.68);
   return `hsl(${tone.hue} ${sat}% ${tone.lightness}%)`;
 }
 
 export function resolveToneRgb(toneKey = "black", saturationPercent = 100) {
   const tone = getToneConfig(toneKey);
+  const safeSat = clamp(Number(saturationPercent) || 100, 0, 100);
 
   if (tone.isNeutral) {
-    return hslToRgbNormalized(tone.hue, 10, tone.lightness);
+    const neutralLightness = 72 - safeSat * 0.6;
+    return hslToRgbNormalized(tone.hue, 4, neutralLightness);
   }
 
-  const safeSat = clamp(Number(saturationPercent) || 100, 0, 100);
   const sat = 22 + safeSat * 0.68;
   return hslToRgbNormalized(tone.hue, sat, tone.lightness);
 }
@@ -60,8 +86,10 @@ export function resolveDateFontCss(fontKey = "sans") {
   return (FONT_CONFIG[fontKey] || FONT_CONFIG.sans).css;
 }
 
-export function resolveDatePdfFontName(fontKey = "sans") {
-  return (FONT_CONFIG[fontKey] || FONT_CONFIG.sans).pdf;
+export function resolveDatePdfFontName(fontKey = "sans", weight = "400") {
+  const config = FONT_CONFIG[fontKey] || FONT_CONFIG.sans;
+  const numericWeight = Number(weight) || 400;
+  return numericWeight >= 600 ? config.pdfBold : config.pdfRegular;
 }
 
 function hslToRgbNormalized(hueDeg, satPercent, lightPercent) {

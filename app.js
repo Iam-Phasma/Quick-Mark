@@ -87,6 +87,7 @@ function getPlacementPreviewOptions() {
     dateFontSize: state.dateFontSize ?? COMPOSER_DEFAULTS.dateFontSize,
     dateFontFamily: resolveDateFontCss(state.dateFontFamily),
     dateFontKey: state.dateFontFamily,
+    dateFontWeight: state.dateFontWeight,
     dateColor: resolveToneCssColor(state.dateTone, state.dateSaturation),
     dateTone: state.dateTone,
     dateSaturation: state.dateSaturation,
@@ -126,6 +127,7 @@ function syncStyleControlsUi() {
   els.dateSaturation.value = String(state.dateSaturation);
   els.dateSaturationValue.textContent = `${state.dateSaturation}%`;
   els.dateFontFamily.value = state.dateFontFamily;
+  els.dateFontWeight.value = state.dateFontWeight;
 
   setToneButtonsState(els.penColorChoices, state.penTone);
   setToneButtonsState(els.dateColorChoices, state.dateTone);
@@ -479,6 +481,12 @@ function bindEvents() {
 
   els.dateFontFamily.addEventListener("change", () => {
     state.dateFontFamily = els.dateFontFamily.value;
+    syncStyleControlsUi();
+    refreshPreviews();
+  });
+
+  els.dateFontWeight.addEventListener("change", () => {
+    state.dateFontWeight = els.dateFontWeight.value;
     syncStyleControlsUi();
     refreshPreviews();
   });

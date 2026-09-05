@@ -345,6 +345,7 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
     signWidth = 180,
     dateFontSize = 12,
     dateFontFamily,
+    dateFontWeight,
     dateColor,
     layerOrder = ["sign", "date", "stamp"],
     layerTransforms = {},
@@ -376,6 +377,7 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
       signWidth,
       dateFontSize,
       dateFontFamily,
+      dateFontWeight,
       dateColor,
     });
 
@@ -411,6 +413,7 @@ function createLayerElement({
   signWidth,
   dateFontSize,
   dateFontFamily,
+  dateFontWeight,
   dateColor,
 }) {
   if (layer === "stamp") {
@@ -437,6 +440,9 @@ function createLayerElement({
       date.style.fontSize = `${dateFontSize}px`;
       if (dateFontFamily) {
         date.style.fontFamily = dateFontFamily;
+      }
+      if (dateFontWeight) {
+        date.style.fontWeight = String(dateFontWeight);
       }
       if (dateColor) {
         date.style.color = dateColor;
