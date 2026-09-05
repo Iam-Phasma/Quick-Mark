@@ -133,6 +133,12 @@ button:hover {
   background: #eef3f7;
 }
 
+button:disabled,
+button:disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 button.primary {
   background: var(--action);
   color: var(--action-text);
@@ -142,6 +148,11 @@ button.primary {
 
 button.primary:hover {
   opacity: 0.92;
+}
+
+button.primary:disabled,
+button.primary:disabled:hover {
+  opacity: 0.5;
 }
 
 .dropzone {
@@ -183,10 +194,13 @@ button.primary:hover {
     linear-gradient(45deg, #eef3f7 25%, transparent 25%),
     linear-gradient(-45deg, #eef3f7 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, #eef3f7 75%),
-    linear-gradient(-45deg, transparent 75%, #eef3f7 75%),
-    #ffffff;
+    linear-gradient(-45deg, transparent 75%, #eef3f7 75%), #ffffff;
   background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
 }
 
 .row {
@@ -220,7 +234,9 @@ button.primary:hover {
   background: #ffffff;
   overflow: hidden;
   cursor: default;
-  transition: opacity 0.14s ease, box-shadow 0.18s ease;
+  transition:
+    opacity 0.14s ease,
+    box-shadow 0.18s ease;
   will-change: transform;
 }
 
@@ -302,7 +318,8 @@ button.primary:hover {
   border: 1px solid #c6d2dd;
   border-radius: 6px;
   background:
-    linear-gradient(90deg, rgba(10, 34, 52, 0.05) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(90deg, rgba(10, 34, 52, 0.05) 1px, transparent 1px) 0 0 /
+      18px 18px,
     linear-gradient(rgba(10, 34, 52, 0.05) 1px, transparent 1px) 0 0 / 18px 18px,
     #eef3f7;
   justify-self: center;
@@ -484,6 +501,7 @@ button.primary:hover {
 }
 
 .viewer-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -495,6 +513,12 @@ button.primary:hover {
 .viewer-toolbar button {
   width: auto;
   padding: 6px 12px;
+}
+
+.viewer-toolbar #exportBtn {
+  position: absolute;
+  right: 10px;
+  margin-top: 0;
 }
 
 .pdf-stage {
@@ -515,7 +539,9 @@ button.primary:hover {
   position: relative;
   background: #ffffff;
   border: 1px solid #bec8d2;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .overlay {
