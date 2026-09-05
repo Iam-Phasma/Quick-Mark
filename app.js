@@ -2,15 +2,21 @@ import { els, pdfCtx, signCtx } from "./js/dom.js";
 import {
   createAppState,
   getPagePlacements,
+  getPageRedactions,
   clearCurrentPagePlacements,
+  clearCurrentPageRedactions,
   totalPlacementCount,
+  totalRedactionCount,
 } from "./js/state.js";
 import {
   setStatus,
   getTodayText,
   renderMarkers,
+  renderRedactions,
   renderComposerPreview,
   placementPointFromEvent,
+  canvasPointFromEvent,
+  normalizedRectFromPoints,
   readPngAsDataUrl,
 } from "./js/ui.js";
 import { initSignaturePad } from "./js/signature.js";
@@ -36,6 +42,8 @@ const state = createAppState();
 let composerEditor = null;
 let signaturePadApi = null;
 let signInputSwitcherApi = null;
+let isFitViewEnabled = false;
+let activeTool = "mark";
 
 const COMPOSER_DEFAULTS = {
   boxWidth: 260,
@@ -64,7 +72,33 @@ function syncFitToggleUi(isFitEnabled) {
 }
 
 function updateExportButton() {
-  els.exportBtn.disabled = !state.pdfDoc || totalPlacementCount(state) === 0;
+  const hasPdf = Boolean(state.pdfDoc);
+  els.exportBtn.disabled = !hasPdf;
+  els.fitViewToggle.disabled = !hasPdf;
+  els.clearPlacementsBtn.disabled = !hasPdf;
+  els.redactionToggleBtn.disabled = !hasPdf;
+
+  if (!hasPdf) {
+    if (isFitViewEnabled) {
+      isFitViewEnabled = false;
+      syncFitToggleUi(false);
+    }
+
+    if (activeTool === "redact") {
+      activeTool = "mark";
+      syncRedactionToggleUi(false);
+    }
+  }
+}
+
+function syncRedactionToggleUi(isEnabled) {
+  els.redactionToggleBtn.classList.toggle("is-active", isEnabled);
+  els.redactionToggleBtn.setAttribute("aria-pressed", String(isEnabled));
+  els.redactionToggleBtn.setAttribute(
+    "title",
+    isEnabled ? "Redaction tool: On" : "Redaction tool: Off",
+  );
+  els.overlay.classList.toggle("is-redaction-mode", isEnabled);
 }
 
 function updateDateFormatOptionSamples() {
@@ -105,6 +139,35 @@ function getPlacementPreviewOptions() {
       getPagePlacements(state, state.currentPage).splice(index, 1);
       refreshPreviews();
       setUiStatus(`Removed mark from page ${state.currentPage}.`);
+    },
+  };
+}
+
+function getRedactionPreviewOptions() {
+  return {
+    editable: activeTool === "redact",
+    onRemoveRedaction: (index) => {
+      const redactions = getPageRedactions(state, state.currentPage);
+      redactions.splice(index, 1);
+      refreshPreviews();
+      setUiStatus(`Removed redaction from page ${state.currentPage}.`);
+    },
+    onRedactionUpdated: (index, nextRect, committed = false) => {
+      const redactions = getPageRedactions(state, state.currentPage);
+      if (!redactions[index]) {
+        return;
+      }
+
+      redactions[index] = {
+        x: nextRect.x,
+        y: nextRect.y,
+        w: nextRect.w,
+        h: nextRect.h,
+      };
+
+      if (committed) {
+        updateExportButton();
+      }
     },
   };
 }
@@ -385,11 +448,14 @@ function trimTransparentPng(dataUrl) {
 
 function refreshPreviews() {
   const options = getPlacementPreviewOptions();
+  const redactions = getPageRedactions(state, state.currentPage);
+  const redactionOptions = getRedactionPreviewOptions();
   renderMarkers(
     els.overlay,
     getPagePlacements(state, state.currentPage),
     options,
   );
+  renderRedactions(els.overlay, redactions, redactionOptions);
   renderComposerPreview(els.composerPreview, options);
   syncComposerPreviewVisualHeight();
   updateExportButton();
@@ -416,13 +482,16 @@ const viewer = createPdfViewer({
   overlay: els.overlay,
   pageInfo: els.pageInfo,
   getPagePlacements,
+  getPageRedactions,
   renderMarkers,
+  renderRedactions,
   setStatus: setUiStatus,
   onPdfNameLoaded: (name) => {
     els.pdfDropText.textContent = name;
     updateExportButton();
   },
   getPlacementPreviewOptions,
+  getRedactionPreviewOptions,
 });
 
 function setupDropzone() {
@@ -440,24 +509,46 @@ function setupDropzone() {
     });
   });
 
-  els.pdfDrop.addEventListener("drop", (event) => {
+  els.pdfDrop.addEventListener("drop", async (event) => {
     const file = event.dataTransfer?.files?.[0];
-    viewer.loadPdf(file);
+    await viewer.loadPdf(file);
+    updateExportButton();
   });
 }
 
 function bindEvents() {
   signInputSwitcherApi = initSignInputSwitcher();
-  let isFitViewEnabled = false;
 
-  els.pdfInput.addEventListener("change", (event) => {
-    viewer.loadPdf(event.target.files?.[0]);
+  els.pdfInput.addEventListener("change", async (event) => {
+    await viewer.loadPdf(event.target.files?.[0]);
+    updateExportButton();
   });
 
   els.fitViewToggle.addEventListener("click", async () => {
     isFitViewEnabled = !isFitViewEnabled;
     syncFitToggleUi(isFitViewEnabled);
     await viewer.setFitToScreen(isFitViewEnabled);
+  });
+
+  els.redactionToggleBtn.addEventListener("click", async () => {
+    activeTool = activeTool === "redact" ? "mark" : "redact";
+    const isRedactionOn = activeTool === "redact";
+    syncRedactionToggleUi(isRedactionOn);
+
+    if (!isRedactionOn) {
+      redactDrag?.draftEl?.remove();
+      redactDrag = null;
+      refreshPreviews();
+      return;
+    }
+
+    if (isRedactionOn && !isFitViewEnabled) {
+      isFitViewEnabled = true;
+      syncFitToggleUi(true);
+      await viewer.setFitToScreen(true);
+    }
+
+    refreshPreviews();
   });
 
   els.stampInput.addEventListener("change", async (event) => {
@@ -492,7 +583,79 @@ function bindEvents() {
     }
   });
 
+  let redactDrag = null;
+
+  els.overlay.addEventListener("pointerdown", (event) => {
+    if (activeTool !== "redact") {
+      return;
+    }
+
+    if (!state.pdfDoc) {
+      setUiStatus("Upload a PDF first.");
+      return;
+    }
+
+    event.preventDefault();
+    els.overlay.setPointerCapture(event.pointerId);
+    const start = canvasPointFromEvent(event, els.overlay);
+    redactDrag = { start, draftEl: null };
+
+    const draft = document.createElement("div");
+    draft.className = "redaction-draft";
+    els.overlay.appendChild(draft);
+    redactDrag.draftEl = draft;
+  });
+
+  els.overlay.addEventListener("pointermove", (event) => {
+    if (activeTool !== "redact" || !redactDrag?.draftEl) {
+      return;
+    }
+
+    const end = canvasPointFromEvent(event, els.overlay);
+    const rect = normalizedRectFromPoints(redactDrag.start, end);
+    redactDrag.draftEl.style.left = `${rect.x * 100}%`;
+    redactDrag.draftEl.style.top = `${rect.y * 100}%`;
+    redactDrag.draftEl.style.width = `${rect.w * 100}%`;
+    redactDrag.draftEl.style.height = `${rect.h * 100}%`;
+  });
+
+  const commitRedaction = (event) => {
+    if (activeTool !== "redact" || !redactDrag) {
+      return;
+    }
+
+    if (els.overlay.hasPointerCapture?.(event.pointerId)) {
+      els.overlay.releasePointerCapture(event.pointerId);
+    }
+
+    const end = canvasPointFromEvent(event, els.overlay);
+    const rect = normalizedRectFromPoints(redactDrag.start, end);
+    redactDrag.draftEl?.remove();
+    redactDrag = null;
+
+    if (rect.w < 0.006 || rect.h < 0.006) {
+      return;
+    }
+
+    const redactions = getPageRedactions(state, state.currentPage);
+    redactions.push(rect);
+    refreshPreviews();
+    setUiStatus(`Redaction added on page ${state.currentPage}.`, true);
+  };
+
+  els.overlay.addEventListener("pointerup", commitRedaction);
+  els.overlay.addEventListener("pointercancel", () => {
+    if (redactDrag?.draftEl) {
+      redactDrag.draftEl.remove();
+    }
+    redactDrag = null;
+  });
+
   els.overlay.addEventListener("click", (event) => {
+    if (activeTool === "redact") {
+      return;
+    }
+
     if (!state.pdfDoc) {
       setUiStatus("Upload a PDF first.");
       return;
@@ -516,8 +679,9 @@ function bindEvents() {
 
   els.clearPlacementsBtn.addEventListener("click", () => {
     clearCurrentPagePlacements(state);
+    clearCurrentPageRedactions(state);
     refreshPreviews();
-    setUiStatus(`Cleared placements on page ${state.currentPage}.`);
+    setUiStatus(`Cleared marks and redactions on page ${state.currentPage}.`);
   });
 
   [els.includeDate, els.includeSeparator, els.dateFormat].forEach((control) => {
@@ -655,6 +819,7 @@ function bindEvents() {
 
 setupDropzone();
 syncFitToggleUi(false);
+syncRedactionToggleUi(false);
 updateDateFormatOptionSamples();
 composerEditor = initComposerEditor({
   container: els.layerEditor,

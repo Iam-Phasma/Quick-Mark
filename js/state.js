@@ -2,6 +2,7 @@ export function createAppState() {
   return {
     pdfBytes: null,
     pdfDoc: null,
+    pdfFileName: null,
     currentPage: 1,
     stampDataUrl: null,
     stampWidth: 140,
@@ -24,6 +25,7 @@ export function createAppState() {
       sign: { x: 0, y: 0 },
     },
     placementsByPage: new Map(),
+    redactionsByPage: new Map(),
   };
 }
 
@@ -38,10 +40,26 @@ export function clearCurrentPagePlacements(state) {
   state.placementsByPage.set(state.currentPage, []);
 }
 
+export function getPageRedactions(state, pageNumber) {
+  if (!state.redactionsByPage.has(pageNumber)) {
+    state.redactionsByPage.set(pageNumber, []);
+  }
+  return state.redactionsByPage.get(pageNumber);
+}
+
+export function clearCurrentPageRedactions(state) {
+  state.redactionsByPage.set(state.currentPage, []);
+}
+
 export function totalPlacementCount(state) {
   return [...state.placementsByPage.values()].reduce((count, list) => count + list.length, 0);
 }
 
+export function totalRedactionCount(state) {
+  return [...state.redactionsByPage.values()].reduce((count, list) => count + list.length, 0);
+}
+
 export function resetPlacements(state) {
   state.placementsByPage = new Map();
+  state.redactionsByPage = new Map();
 }

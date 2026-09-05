@@ -28,6 +28,7 @@ export const els = {
   exportBtn: document.getElementById("exportBtn"),
   statusEl: document.getElementById("status"),
   fitViewToggle: document.getElementById("fitViewToggle"),
+  redactionToggleBtn: document.getElementById("redactionToggleBtn"),
   prevPageBtn: document.getElementById("prevPageBtn"),
   nextPageBtn: document.getElementById("nextPageBtn"),
   pageInfo: document.getElementById("pageInfo"),
