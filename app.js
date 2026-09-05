@@ -38,7 +38,12 @@ const COMPOSER_DEFAULTS = {
   dateFontSize: 12,
 };
 
-const setUiStatus = (message, ok = false) => setStatus(els.statusEl, message, ok);
+const setUiStatus = (message, ok = false) =>
+  setStatus(els.statusEl, message, ok);
+
+function updateExportButton() {
+  els.exportBtn.disabled = !state.pdfDoc || totalPlacementCount(state) === 0;
+}
 
 function updateDateFormatOptionSamples() {
   const options = Array.from(els.dateFormat.options || []);
@@ -150,7 +155,17 @@ function trimTransparentPng(dataUrl) {
         return;
       }
 
-      trimmedCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+      trimmedCtx.drawImage(
+        canvas,
+        minX,
+        minY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropWidth,
+        cropHeight,
+      );
       resolve({
         dataUrl: trimmedCanvas.toDataURL("image/png"),
         aspect: cropHeight / cropWidth,
@@ -168,9 +183,14 @@ function trimTransparentPng(dataUrl) {
 
 function refreshPreviews() {
   const options = getPlacementPreviewOptions();
-  renderMarkers(els.overlay, getPagePlacements(state, state.currentPage), options);
+  renderMarkers(
+    els.overlay,
+    getPagePlacements(state, state.currentPage),
+    options,
+  );
   renderComposerPreview(els.composerPreview, options);
   syncComposerPreviewVisualHeight();
+  updateExportButton();
 }
 
 function syncComposerPreviewVisualHeight() {
@@ -197,6 +217,7 @@ const viewer = createPdfViewer({
   setStatus: setUiStatus,
   onPdfNameLoaded: (name) => {
     els.pdfDropText.textContent = name;
+    updateExportButton();
   },
   getPlacementPreviewOptions,
 });
@@ -229,7 +250,10 @@ function bindEvents() {
 
   els.stampInput.addEventListener("change", async (event) => {
     try {
-      state.stampDataUrl = await readPngAsDataUrl(event.target.files?.[0], "Stamp");
+      state.stampDataUrl = await readPngAsDataUrl(
+        event.target.files?.[0],
+        "Stamp",
+      );
       state.stampAspect = await getImageAspect(state.stampDataUrl);
       refreshPreviews();
       setUiStatus("Stamp PNG loaded.", true);
@@ -240,7 +264,10 @@ function bindEvents() {
 
   els.esignInput.addEventListener("change", async (event) => {
     try {
-      const rawSignDataUrl = await readPngAsDataUrl(event.target.files?.[0], "E-sign");
+      const rawSignDataUrl = await readPngAsDataUrl(
+        event.target.files?.[0],
+        "E-sign",
+      );
       const trimmedSign = await trimTransparentPng(rawSignDataUrl);
       state.signDataUrl = trimmedSign.dataUrl;
       state.signAspect = trimmedSign.aspect;
@@ -264,7 +291,11 @@ function bindEvents() {
       return;
     }
 
-    const point = placementPointFromEvent(event, els.overlay, getPlacementPreviewOptions());
+    const point = placementPointFromEvent(
+      event,
+      els.overlay,
+      getPlacementPreviewOptions(),
+    );
     placements.push(point);
     refreshPreviews();
     setUiStatus(`Placed mark on page ${state.currentPage}.`, true);
@@ -276,11 +307,7 @@ function bindEvents() {
     setUiStatus(`Cleared placements on page ${state.currentPage}.`);
   });
 
-  [
-    els.includeDate,
-    els.includeSeparator,
-    els.dateFormat,
-  ].forEach((control) => {
+  [els.includeDate, els.includeSeparator, els.dateFormat].forEach((control) => {
     control.addEventListener("input", () => {
       updateDateFormatOptionSamples();
       refreshPreviews();
@@ -350,7 +377,8 @@ function bindEvents() {
         composerOptions: getPlacementPreviewOptions(),
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown export error";
+      const message =
+        error instanceof Error ? error.message : "Unknown export error";
       setUiStatus(`Could not export PDF. ${message}`);
     }
   });

@@ -8,7 +8,10 @@
     <script>
       (function () {
         const ua = navigator.userAgent || "";
-        const isPhone = /iPhone|iPod|Android.+Mobile|Windows Phone|BlackBerry|BB10|Opera Mini/i.test(ua);
+        const isPhone =
+          /iPhone|iPod|Android.+Mobile|Windows Phone|BlackBerry|BB10|Opera Mini/i.test(
+            ua,
+          );
         if (isPhone) {
           document.documentElement.classList.add("phone-blocked");
         }
@@ -16,10 +19,17 @@
     </script>
   </head>
   <body>
-    <section class="phone-block" role="alert" aria-live="polite" aria-label="Desktop only notice">
+    <section
+      class="phone-block"
+      role="alert"
+      aria-live="polite"
+      aria-label="Desktop only notice"
+    >
       <div class="phone-block-card">
         <h1>Desktop Only</h1>
-        <p>Quick Mark is currently available only on desktop or laptop browsers.</p>
+        <p>
+          Quick Mark is currently available only on desktop or laptop browsers.
+        </p>
       </div>
     </section>
 
@@ -28,7 +38,13 @@
         <h2>1. Load PDF</h2>
 
         <label class="label" for="pdfInput">PDF Document</label>
-        <div id="pdfDrop" class="dropzone" tabindex="0" role="button" aria-label="Drop PDF here or click to upload">
+        <div
+          id="pdfDrop"
+          class="dropzone"
+          tabindex="0"
+          role="button"
+          aria-label="Drop PDF here or click to upload"
+        >
           <span id="pdfDropText">Drop PDF here or click to upload</span>
           <input id="pdfInput" type="file" accept="application/pdf" />
         </div>
@@ -37,11 +53,18 @@
         <label class="label" for="stampInput">Stamp PNG</label>
         <input id="stampInput" type="file" accept="image/png" />
 
-        <label class="label" for="esignInput">Upload E-sign (PNG transparent) or draw below</label>
+        <label class="label" for="esignInput"
+          >Upload E-sign (PNG transparent) or draw below</label
+        >
         <input id="esignInput" type="file" accept="image/png" />
 
         <div class="sign-box">
-          <canvas id="signCanvas" width="320" height="120" aria-label="Draw signature"></canvas>
+          <canvas
+            id="signCanvas"
+            width="320"
+            height="120"
+            aria-label="Draw signature"
+          ></canvas>
           <div class="row">
             <button id="clearSignBtn" type="button">Clear</button>
             <button id="useSignDrawingBtn" type="button">Use Drawing</button>
@@ -76,14 +99,14 @@
         <button id="openComposerBtn" type="button">Open Composer Editor</button>
 
         <h2>5. Place Marks</h2>
-        <p class="hint">Click on the PDF page to place the mark. Drag to fine-tune position.</p>
+        <p class="hint">
+          Click on the PDF page to place the mark. Drag to fine-tune position.
+        </p>
         <button id="clearPlacementsBtn" type="button">Clear placements</button>
 
-        <h2>6. Export</h2>
-        <p class="hint">Export the current page placements into a new PDF.</p>
-        <button id="exportBtn" type="button" class="primary">Export Marked PDF</button>
-
-        <p id="status" class="status" role="status" aria-live="polite">Waiting for PDF.</p>
+        <p id="status" class="status" role="status" aria-live="polite">
+          Waiting for PDF.
+        </p>
       </section>
 
       <section class="viewer" aria-label="PDF viewer">
@@ -91,6 +114,9 @@
           <button id="prevPageBtn" type="button">Prev</button>
           <span id="pageInfo">Page 0 / 0</span>
           <button id="nextPageBtn" type="button">Next</button>
+          <button id="exportBtn" type="button" class="primary" disabled>
+            Export
+          </button>
         </div>
 
         <div id="pdfStage" class="pdf-stage">
@@ -102,21 +128,38 @@
       </section>
     </main>
 
-    <div id="composerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="composerTitle">
+    <div
+      id="composerModal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="composerTitle"
+    >
       <div class="modal-panel">
         <div class="modal-head">
           <h2 id="composerTitle">Composer Editor</h2>
           <button id="closeComposerBtn" type="button">Close</button>
         </div>
 
-        <p class="hint">Drag layers to reorder. Drag elements in the preview or use X/Y values for precise overlap.</p>
+        <p class="hint">
+          Drag layers to reorder. Drag elements in the preview or use X/Y values
+          for precise overlap.
+        </p>
         <div class="composer-layout">
-          <div id="composerPreview" class="composer-preview" aria-label="Composer live preview"></div>
+          <div
+            id="composerPreview"
+            class="composer-preview"
+            aria-label="Composer live preview"
+          ></div>
 
           <div class="composer-controls">
             <div class="component-editor">
               <h3>Components</h3>
-              <div id="layerEditor" class="layer-editor" aria-label="Layer hierarchy editor"></div>
+              <div
+                id="layerEditor"
+                class="layer-editor"
+                aria-label="Layer hierarchy editor"
+              ></div>
             </div>
           </div>
         </div>
