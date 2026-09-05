@@ -4,6 +4,7 @@ export function initSignaturePad({
   clearSignBtn,
   useSignDrawingBtn,
   setStatus,
+  getPenColor,
   onUseDrawing,
 }) {
   const drawState = {
@@ -16,7 +17,14 @@ export function initSignaturePad({
   clearSignatureCanvas(signCtx, signCanvas);
   signCtx.lineWidth = 2;
   signCtx.lineCap = "round";
-  signCtx.strokeStyle = "#101820";
+  const resolvePenColor = () => getPenColor?.() || "#101820";
+  const applyPenColor = () => {
+    const color = resolvePenColor();
+    signCtx.strokeStyle = color;
+    signCtx.fillStyle = color;
+  };
+
+  applyPenColor();
 
   const start = (event) => {
     drawState.active = true;
@@ -26,9 +34,9 @@ export function initSignaturePad({
     drawState.lastY = p.y;
 
     // Draw a dot on tap/click so single-point signatures still appear.
+    applyPenColor();
     signCtx.beginPath();
     signCtx.arc(p.x, p.y, 1, 0, Math.PI * 2);
-    signCtx.fillStyle = "#101820";
     signCtx.fill();
   };
 
@@ -38,6 +46,7 @@ export function initSignaturePad({
     }
 
     const p = pointToSignCanvas(event, signCanvas);
+    applyPenColor();
     signCtx.beginPath();
     signCtx.moveTo(drawState.lastX, drawState.lastY);
     signCtx.lineTo(p.x, p.y);
@@ -110,6 +119,12 @@ export function initSignaturePad({
     onUseDrawing(signCanvas.toDataURL("image/png"));
     setStatus("Using drawn signature.", true);
   });
+
+  return {
+    setPenColor: () => {
+      applyPenColor();
+    },
+  };
 }
 
 function clearSignatureCanvas(signCtx, signCanvas) {

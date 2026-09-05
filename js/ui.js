@@ -344,6 +344,8 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
     stampWidth = 140,
     signWidth = 180,
     dateFontSize = 12,
+    dateFontFamily,
+    dateColor,
     layerOrder = ["sign", "date", "stamp"],
     layerTransforms = {},
     boxWidth = 260,
@@ -373,6 +375,8 @@ function buildCompositionBox(previewOptions = {}, mode = "overlay") {
       stampWidth,
       signWidth,
       dateFontSize,
+      dateFontFamily,
+      dateColor,
     });
 
     if (!layerEl) {
@@ -406,6 +410,8 @@ function createLayerElement({
   stampWidth,
   signWidth,
   dateFontSize,
+  dateFontFamily,
+  dateColor,
 }) {
   if (layer === "stamp") {
     if (stampDataUrl) {
@@ -429,6 +435,12 @@ function createLayerElement({
       date.className = "placement-layer placement-date";
       date.textContent = dateText;
       date.style.fontSize = `${dateFontSize}px`;
+      if (dateFontFamily) {
+        date.style.fontFamily = dateFontFamily;
+      }
+      if (dateColor) {
+        date.style.color = dateColor;
+      }
       return date;
     }
 

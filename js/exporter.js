@@ -1,3 +1,5 @@
+import { resolveToneRgb, resolveDatePdfFontName } from "./styleTokens.js";
+
 let pdfLibPromise = null;
 
 async function getPdfLib() {
@@ -31,7 +33,9 @@ export async function exportMarkedPdf({
   const { PDFDocument, rgb, StandardFonts } = await getPdfLib();
 
   const outDoc = await PDFDocument.load(state.pdfBytes);
-  const font = await outDoc.embedFont(StandardFonts.Helvetica);
+  const dateFontName = resolveDatePdfFontName(composerOptions?.dateFontKey);
+  const selectedDateFont = StandardFonts[dateFontName] || StandardFonts.Helvetica;
+  const font = await outDoc.embedFont(selectedDateFont);
 
   let stampImage = null;
   if (state.stampDataUrl) {
@@ -54,6 +58,10 @@ export async function exportMarkedPdf({
   const previewPadding = Number(composerOptions?.boxPadding ?? 6);
   const dateText = getTodayText(dateFormat.value, includeSeparator.checked);
   const dateFontSizePreview = Number(composerOptions?.dateFontSize ?? 12);
+  const dateColor = resolveToneRgb(
+    composerOptions?.dateTone || "black",
+    composerOptions?.dateSaturation ?? 100,
+  );
   const anchorOffsetPreview = 0;
 
   for (const [pageNumber, marks] of state.placementsByPage.entries()) {
@@ -150,7 +158,7 @@ export async function exportMarkedPdf({
             y: baselineY,
             size: dateMetrics.fontSize,
             font,
-            color: rgb(0.05, 0.1, 0.15),
+            color: rgb(dateColor.r, dateColor.g, dateColor.b),
           });
         }
       }

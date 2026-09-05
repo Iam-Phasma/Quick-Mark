@@ -17,6 +17,10 @@ import { initSignaturePad } from "./js/signature.js";
 import { createPdfViewer } from "./js/pdfViewer.js";
 import { exportMarkedPdf } from "./js/exporter.js";
 import { initComposerEditor } from "./js/composerEditor.js";
+import {
+  resolveToneCssColor,
+  resolveDateFontCss,
+} from "./js/styleTokens.js";
 
 if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
   window.addEventListener("load", () => {
@@ -30,6 +34,7 @@ if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
 
 const state = createAppState();
 let composerEditor = null;
+let signaturePadApi = null;
 
 const COMPOSER_DEFAULTS = {
   boxWidth: 260,
@@ -73,6 +78,11 @@ function getPlacementPreviewOptions() {
     stampAspect: state.stampAspect,
     signAspect: state.signAspect,
     dateFontSize: state.dateFontSize ?? COMPOSER_DEFAULTS.dateFontSize,
+    dateFontFamily: resolveDateFontCss(state.dateFontFamily),
+    dateFontKey: state.dateFontFamily,
+    dateColor: resolveToneCssColor(state.dateTone, state.dateSaturation),
+    dateTone: state.dateTone,
+    dateSaturation: state.dateSaturation,
     layerOrder: state.layerOrder,
     layerTransforms: state.layerTransforms,
     boxWidth: COMPOSER_DEFAULTS.boxWidth,
@@ -88,6 +98,130 @@ function getPlacementPreviewOptions() {
       setUiStatus(`Removed mark from page ${state.currentPage}.`);
     },
   };
+}
+
+function setToneButtonsState(container, activeTone) {
+  if (!container) {
+    return;
+  }
+
+  const buttons = Array.from(container.querySelectorAll("button[data-tone]"));
+  buttons.forEach((button) => {
+    const isActive = button.dataset.tone === activeTone;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function syncStyleControlsUi() {
+  els.penSaturation.value = String(state.penSaturation);
+  els.penSaturationValue.textContent = `${state.penSaturation}%`;
+  els.dateSaturation.value = String(state.dateSaturation);
+  els.dateSaturationValue.textContent = `${state.dateSaturation}%`;
+  els.dateFontFamily.value = state.dateFontFamily;
+
+  setToneButtonsState(els.penColorChoices, state.penTone);
+  setToneButtonsState(els.dateColorChoices, state.dateTone);
+
+  const penInk = resolveToneCssColor(state.penTone, state.penSaturation);
+  const dateInk = resolveToneCssColor(state.dateTone, state.dateSaturation);
+
+  els.signCanvas.style.setProperty("--pen-ink", penInk);
+  els.penSaturation.style.accentColor = penInk;
+  els.dateSaturation.style.accentColor = dateInk;
+  els.dateFontFamily.style.fontFamily = resolveDateFontCss(state.dateFontFamily);
+
+  signaturePadApi?.setPenColor(penInk);
+}
+
+function initAssetSwitcher() {
+  const switcher = document.getElementById("assetSwitch");
+  if (!switcher) {
+    return;
+  }
+
+  const buttons = Array.from(switcher.querySelectorAll("button[data-asset-tab]"));
+  const panels = Array.from(document.querySelectorAll("[data-asset-panel]"));
+
+  if (!buttons.length || !panels.length) {
+    return;
+  }
+
+  const activate = (tabKey) => {
+    const activeIndex = buttons.findIndex(
+      (button) => button.dataset.assetTab === tabKey,
+    );
+
+    if (activeIndex < 0) {
+      return;
+    }
+
+    buttons.forEach((button, index) => {
+      const isActive = index === activeIndex;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.assetPanel === tabKey;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+    });
+
+    switcher.style.setProperty("--asset-index", String(activeIndex));
+  };
+
+  const syncPanelHeight = () => {
+    let maxHeight = 0;
+
+    panels.forEach((panel) => {
+      const wasHidden = panel.hidden;
+      const hadActive = panel.classList.contains("is-active");
+
+      panel.hidden = false;
+      panel.classList.add("is-active");
+      maxHeight = Math.max(maxHeight, Math.ceil(panel.scrollHeight));
+
+      if (!hadActive) {
+        panel.classList.remove("is-active");
+      }
+      panel.hidden = wasHidden;
+    });
+
+    const panelsWrap = switcher.nextElementSibling;
+    if (panelsWrap && maxHeight > 0) {
+      panelsWrap.style.setProperty("--asset-panel-max-height", `${maxHeight}px`);
+    }
+  };
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activate(button.dataset.assetTab || "stamp");
+    });
+  });
+
+  switcher.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    const currentIndex = buttons.findIndex((button) => button.classList.contains("is-active"));
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const nextIndex = (currentIndex + direction + buttons.length) % buttons.length;
+    const next = buttons[nextIndex];
+
+    activate(next.dataset.assetTab || "stamp");
+    next.focus();
+    event.preventDefault();
+  });
+
+  activate("stamp");
+  syncPanelHeight();
+  window.addEventListener("resize", syncPanelHeight);
 }
 
 function getImageAspect(dataUrl) {
@@ -336,6 +470,55 @@ function bindEvents() {
     });
   });
 
+  els.dateFontFamily.addEventListener("change", () => {
+    state.dateFontFamily = els.dateFontFamily.value;
+    syncStyleControlsUi();
+    refreshPreviews();
+  });
+
+  els.penSaturation.addEventListener("input", () => {
+    state.penSaturation = Number(els.penSaturation.value) || 100;
+    syncStyleControlsUi();
+  });
+
+  els.penSaturation.addEventListener("change", () => {
+    state.penSaturation = Number(els.penSaturation.value) || 100;
+    syncStyleControlsUi();
+  });
+
+  els.dateSaturation.addEventListener("input", () => {
+    state.dateSaturation = Number(els.dateSaturation.value) || 100;
+    syncStyleControlsUi();
+    refreshPreviews();
+  });
+
+  els.dateSaturation.addEventListener("change", () => {
+    state.dateSaturation = Number(els.dateSaturation.value) || 100;
+    syncStyleControlsUi();
+    refreshPreviews();
+  });
+
+  els.penColorChoices.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-tone]");
+    if (!button) {
+      return;
+    }
+
+    state.penTone = button.dataset.tone || "black";
+    syncStyleControlsUi();
+  });
+
+  els.dateColorChoices.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-tone]");
+    if (!button) {
+      return;
+    }
+
+    state.dateTone = button.dataset.tone || "black";
+    syncStyleControlsUi();
+    refreshPreviews();
+  });
+
   els.openComposerBtn.addEventListener("click", () => {
     els.composerModal.classList.remove("hidden");
     requestAnimationFrame(() => {
@@ -431,12 +614,13 @@ composerEditor = initComposerEditor({
   },
   onChange: refreshPreviews,
 });
-initSignaturePad({
+signaturePadApi = initSignaturePad({
   signCanvas: els.signCanvas,
   signCtx,
   clearSignBtn: els.clearSignBtn,
   useSignDrawingBtn: els.useSignDrawingBtn,
   setStatus: setUiStatus,
+  getPenColor: () => resolveToneCssColor(state.penTone, state.penSaturation),
   onUseDrawing: (drawingDataUrl) => {
     trimTransparentPng(drawingDataUrl).then((trimmedSign) => {
       state.signDataUrl = trimmedSign.dataUrl;
@@ -448,4 +632,6 @@ initSignaturePad({
 });
 bindEvents();
 viewer.renderA4Placeholder();
+initAssetSwitcher();
+syncStyleControlsUi();
 refreshPreviews();

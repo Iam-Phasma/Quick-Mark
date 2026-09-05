@@ -10,7 +10,12 @@ export function createAppState() {
     signWidth: 180,
     signAspect: 0.375,
     signWidthScale: 1,
+    penTone: "black",
+    penSaturation: 100,
     dateFontSize: 12,
+    dateFontFamily: "sans",
+    dateTone: "black",
+    dateSaturation: 100,
     layerOrder: ["sign", "date", "stamp"],
     layerTransforms: {
       stamp: { x: 0, y: 0 },

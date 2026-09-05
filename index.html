@@ -50,59 +50,129 @@
         </div>
 
         <h2>2. Build Mark Assets</h2>
-        <label class="label" for="stampInput">Stamp PNG</label>
-        <input id="stampInput" type="file" accept="image/png" />
-
-        <label class="label" for="esignInput"
-          >Upload E-sign (PNG transparent) or draw below</label
-        >
-        <input id="esignInput" type="file" accept="image/png" />
-
-        <div class="sign-box">
-          <canvas
-            id="signCanvas"
-            width="320"
-            height="120"
-            aria-label="Draw signature"
-          ></canvas>
-          <div class="row">
-            <button id="clearSignBtn" type="button">Clear</button>
-            <button id="useSignDrawingBtn" type="button">Use Drawing</button>
-          </div>
+        <div id="assetSwitch" class="asset-switch" aria-label="Asset section switcher" tabindex="0">
+          <button type="button" class="asset-tab-btn is-active" data-asset-tab="stamp" aria-pressed="true">Stamp</button>
+          <button type="button" class="asset-tab-btn" data-asset-tab="sign" aria-pressed="false">E-sign</button>
+          <button type="button" class="asset-tab-btn" data-asset-tab="date" aria-pressed="false">Date</button>
+          <span class="asset-switch-indicator" aria-hidden="true"></span>
         </div>
 
-        <h2>3. Date</h2>
-        <label class="check">
-          <input id="includeDate" type="checkbox" checked />
-          Include auto date
-        </label>
+        <div class="asset-panels">
+          <section class="asset-panel is-active" data-asset-panel="stamp">
+            <label class="label" for="stampInput">Stamp PNG</label>
+            <input id="stampInput" type="file" accept="image/png" />
+          </section>
 
-        <label class="check">
-          <input id="includeSeparator" type="checkbox" checked />
-          Include separator
-        </label>
+          <section class="asset-panel" data-asset-panel="sign" hidden>
+            <label class="label" for="esignInput"
+              >Upload E-sign (PNG transparent) or draw below</label
+            >
+            <input id="esignInput" type="file" accept="image/png" />
 
-        <label class="label" for="dateFormat">Date format</label>
-        <select id="dateFormat">
-          <option value="mmm-dd-yyyy">Sample</option>
-          <option value="mmm-dd-yyyy-upper">Sample</option>
-          <option value="iso">Sample</option>
-          <option value="mm-dd-yyyy">Sample</option>
-          <option value="dd-mm-yyyy">Sample</option>
-          <option value="dd-mmm-yyyy">Sample</option>
-          <option value="dd-mmm-yyyy-upper">Sample</option>
-          <option value="long">Sample</option>
-        </select>
+            <div class="sign-box">
+              <canvas
+                id="signCanvas"
+                width="320"
+                height="120"
+                aria-label="Draw signature"
+              ></canvas>
+              <div class="row">
+                <button id="clearSignBtn" type="button">Clear</button>
+                <button id="useSignDrawingBtn" type="button">Use Drawing</button>
+              </div>
+            </div>
 
-        <h2>4. Arrange Composition</h2>
-        <p class="hint">Open Composer Editor to set layer order and offsets.</p>
-        <button id="openComposerBtn" type="button">Open Composer Editor</button>
+            <div class="style-group" aria-label="Signature pen styling">
+              <span class="label style-label">Pen color</span>
+              <div
+                id="penColorChoices"
+                class="tone-row"
+                role="radiogroup"
+                aria-label="Pen color choices"
+              >
+                <button type="button" class="tone-btn" data-tone="black" aria-label="Black" title="Black"></button>
+                <button type="button" class="tone-btn" data-tone="red" aria-label="Red" title="Red"></button>
+                <button type="button" class="tone-btn" data-tone="blue" aria-label="Blue" title="Blue"></button>
+              </div>
 
-        <h2>5. Place Marks</h2>
-        <p class="hint">
-          Click on the PDF page to place the mark. Drag to fine-tune position.
-        </p>
-        <button id="clearPlacementsBtn" type="button">Clear placements</button>
+              <label class="label sat-label" for="penSaturation">
+                Pen saturation
+                <span id="penSaturationValue" class="sat-value">100%</span>
+              </label>
+              <input
+                id="penSaturation"
+                type="range"
+                min="35"
+                max="100"
+                step="1"
+                value="100"
+              />
+            </div>
+          </section>
+
+          <section class="asset-panel" data-asset-panel="date" hidden>
+            <label class="check">
+              <input id="includeDate" type="checkbox" checked />
+              Include auto date
+            </label>
+
+            <label class="check">
+              <input id="includeSeparator" type="checkbox" checked />
+              Include separator
+            </label>
+
+            <label class="label" for="dateFormat">Date format</label>
+            <select id="dateFormat">
+              <option value="mmm-dd-yyyy">Sample</option>
+              <option value="mmm-dd-yyyy-upper">Sample</option>
+              <option value="iso">Sample</option>
+              <option value="mm-dd-yyyy">Sample</option>
+              <option value="dd-mm-yyyy">Sample</option>
+              <option value="dd-mmm-yyyy">Sample</option>
+              <option value="dd-mmm-yyyy-upper">Sample</option>
+              <option value="long">Sample</option>
+            </select>
+
+            <div class="style-group" aria-label="Date text styling">
+              <label class="label style-label" for="dateFontFamily">Date font</label>
+              <select id="dateFontFamily">
+                <option value="sans">Sans</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Mono</option>
+              </select>
+
+              <span class="label style-label">Date color (BLK, RGBIV)</span>
+              <div
+                id="dateColorChoices"
+                class="tone-row tone-row-wide"
+                role="radiogroup"
+                aria-label="Date color choices"
+              >
+                <button type="button" class="tone-btn" data-tone="black" aria-label="Black" title="Black"></button>
+                <button type="button" class="tone-btn" data-tone="red" aria-label="Red" title="Red"></button>
+                <button type="button" class="tone-btn" data-tone="orange" aria-label="Orange" title="Orange"></button>
+                <button type="button" class="tone-btn" data-tone="yellow" aria-label="Yellow" title="Yellow"></button>
+                <button type="button" class="tone-btn" data-tone="green" aria-label="Green" title="Green"></button>
+                <button type="button" class="tone-btn" data-tone="blue" aria-label="Blue" title="Blue"></button>
+                <button type="button" class="tone-btn" data-tone="indigo" aria-label="Indigo" title="Indigo"></button>
+                <button type="button" class="tone-btn" data-tone="violet" aria-label="Violet" title="Violet"></button>
+              </div>
+
+              <label class="label sat-label" for="dateSaturation">
+                Date saturation
+                <span id="dateSaturationValue" class="sat-value">100%</span>
+              </label>
+              <input
+                id="dateSaturation"
+                type="range"
+                min="35"
+                max="100"
+                step="1"
+                value="100"
+              />
+            </div>
+          </section>
+        </div>
 
         <p id="status" class="status" role="status" aria-live="polite">
           Waiting for PDF.
@@ -111,21 +181,48 @@
 
       <section class="viewer" aria-label="PDF viewer">
         <div class="viewer-toolbar">
-          <button
-            id="fitViewToggle"
-            type="button"
-            aria-pressed="false"
-            aria-label="Fit to screen"
-            title="Fit to screen: Off"
-          >
-            <img src="./fit-icon.svg" alt="" aria-hidden="true" />
-          </button>
-          <button id="prevPageBtn" type="button">Prev</button>
-          <span id="pageInfo">Page 0 / 0</span>
-          <button id="nextPageBtn" type="button">Next</button>
-          <button id="exportBtn" type="button" class="primary" disabled>
-            Export
-          </button>
+          <div class="viewer-toolbar-left">
+            <button
+              id="fitViewToggle"
+              class="tool-icon-btn"
+              type="button"
+              aria-pressed="false"
+              aria-label="Fit to screen"
+              title="Fit to screen: Off"
+            >
+              <img src="./icons/fit-icon.svg" alt="" aria-hidden="true" />
+            </button>
+            <button
+              id="openComposerBtn"
+              class="tool-icon-btn"
+              type="button"
+              aria-label="Open Composer Editor"
+              title="Open Composer Editor"
+            >
+              <img src="./icons/layer.svg" alt="" aria-hidden="true" />
+            </button>
+            <button
+              id="clearPlacementsBtn"
+              class="tool-icon-btn"
+              type="button"
+              aria-label="Clear placements"
+              title="Clear placements"
+            >
+              <img src="./icons/redo.svg" alt="" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div class="viewer-toolbar-center">
+            <button id="prevPageBtn" type="button">Prev</button>
+            <span id="pageInfo">Page 0 / 0</span>
+            <button id="nextPageBtn" type="button">Next</button>
+          </div>
+
+          <div class="viewer-toolbar-right">
+            <button id="exportBtn" type="button" class="primary" disabled>
+              Export
+            </button>
+          </div>
         </div>
 
         <div id="pdfStage" class="pdf-stage">

@@ -1,4 +1,4 @@
-const CACHE_NAME = "quickmark-v5";
+const CACHE_NAME = "quickmark-v6";
 
 const LOCAL_ASSETS = ["./", "./index.html"];
 
