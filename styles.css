@@ -94,6 +94,13 @@ body {
   padding: 12px;
   overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#status {
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .panel h2 {
@@ -301,25 +308,7 @@ button.primary:disabled:hover {
 }
 
 .asset-panel.is-active {
-  animation: asset-panel-enter 220ms ease;
-}
-
-.action-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-@keyframes asset-panel-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: none;
 }
 
 .style-group {
@@ -728,20 +717,28 @@ button.primary:disabled:hover {
   flex: 0 0 36px;
   padding: 6px;
   line-height: 0;
-  display: grid;
-  place-items: center;
+  position: relative;
 }
 
 .tool-icon-btn img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 20px;
   height: 20px;
   display: block;
-  margin: auto;
+  object-fit: contain;
+  object-position: center;
+  transform: translate(-50%, -50%);
 }
 
 #fitViewToggle.is-active {
-  border-color: var(--action);
-  background: #e8f2fb;
+  border: none;
+  background: var(--action);
+}
+
+#fitViewToggle.is-active img {
+  filter: brightness(0) invert(1);
 }
 
 .pdf-stage {

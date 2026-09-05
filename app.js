@@ -53,6 +53,13 @@ function syncFitToggleUi(isFitEnabled) {
     isFitEnabled ? "Fit to screen: On" : "Fit to screen: Off",
   );
   els.fitViewToggle.classList.toggle("is-active", isFitEnabled);
+
+  const fitIcon = els.fitViewToggle.querySelector("img");
+  if (fitIcon) {
+    fitIcon.src = isFitEnabled
+      ? "./icons/fit-icon-active.svg"
+      : "./icons/fit-icon.svg";
+  }
 }
 
 function updateExportButton() {
