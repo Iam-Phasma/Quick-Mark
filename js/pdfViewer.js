@@ -2,17 +2,21 @@ let pdfjsLibPromise = null;
 
 async function getPdfJs() {
   if (!pdfjsLibPromise) {
-    pdfjsLibPromise = import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.mjs").then((module) => {
-      module.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs";
-      return module;
-    });
+    pdfjsLibPromise =
+      import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.min.mjs").then(
+        (module) => {
+          module.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.6.82/pdf.worker.min.mjs";
+          return module;
+        },
+      );
   }
   return pdfjsLibPromise;
 }
 
 export function createPdfViewer({
   state,
+  pdfStage,
   pdfCanvas,
   pdfCtx,
   overlay,
@@ -25,6 +29,47 @@ export function createPdfViewer({
 }) {
   let isRendering = false;
   let renderPending = false;
+  let fitToScreen = false;
+  const defaultScale = 1.2;
+
+  function getStageContentSize() {
+    if (!pdfStage) {
+      return null;
+    }
+
+    const styles = window.getComputedStyle(pdfStage);
+    const paddingX =
+      (parseFloat(styles.paddingLeft) || 0) +
+      (parseFloat(styles.paddingRight) || 0);
+    const paddingY =
+      (parseFloat(styles.paddingTop) || 0) +
+      (parseFloat(styles.paddingBottom) || 0);
+    const width = Math.max(1, pdfStage.clientWidth - paddingX);
+    const height = Math.max(1, pdfStage.clientHeight - paddingY);
+    return { width, height };
+  }
+
+  function getViewportForMode(page) {
+    if (!fitToScreen) {
+      return page.getViewport({ scale: defaultScale });
+    }
+
+    const stageSize = getStageContentSize();
+    if (!stageSize) {
+      return page.getViewport({ scale: defaultScale });
+    }
+
+    const baseViewport = page.getViewport({ scale: 1 });
+    const widthScale = stageSize.width / baseViewport.width;
+    const heightScale = stageSize.height / baseViewport.height;
+    const fitScale = Math.min(widthScale, heightScale);
+
+    if (!Number.isFinite(fitScale) || fitScale <= 0) {
+      return page.getViewport({ scale: defaultScale });
+    }
+
+    return page.getViewport({ scale: Math.max(0.1, fitScale) });
+  }
 
   function renderA4Placeholder() {
     // A4 at ~96 DPI keeps a realistic paper aspect for empty-state placement preview.
@@ -59,7 +104,7 @@ export function createPdfViewer({
 
     isRendering = true;
     const page = await state.pdfDoc.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1.2 });
+    const viewport = getViewportForMode(page);
 
     pdfCanvas.width = viewport.width;
     pdfCanvas.height = viewport.height;
@@ -70,7 +115,7 @@ export function createPdfViewer({
     renderMarkers(
       overlay,
       getPagePlacements(state, state.currentPage),
-      getPlacementPreviewOptions()
+      getPlacementPreviewOptions(),
     );
 
     isRendering = false;
@@ -124,10 +169,22 @@ export function createPdfViewer({
           data,
           disableWorker: true,
         })
-        .promise
-        .catch(() => {
+        .promise.catch(() => {
           throw firstError;
         });
+    }
+  }
+
+  async function setFitToScreen(enabled) {
+    fitToScreen = Boolean(enabled);
+    if (state.pdfDoc) {
+      await renderPage(state.currentPage);
+    }
+  }
+
+  async function handleViewportChange() {
+    if (fitToScreen && state.pdfDoc) {
+      await renderPage(state.currentPage);
     }
   }
 
@@ -135,6 +192,8 @@ export function createPdfViewer({
     loadPdf,
     renderPage,
     renderA4Placeholder,
+    setFitToScreen,
+    handleViewportChange,
   };
 }
 
