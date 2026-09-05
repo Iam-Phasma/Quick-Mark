@@ -813,6 +813,15 @@ button.primary:disabled:hover {
   filter: brightness(0) invert(1);
 }
 
+#redactionToggleBtn.is-active {
+  border: none;
+  background: var(--action);
+}
+
+#redactionToggleBtn.is-active img {
+  filter: brightness(0) invert(1);
+}
+
 .pdf-stage {
   position: relative;
   margin: 10px;
@@ -842,6 +851,10 @@ button.primary:disabled:hover {
   pointer-events: auto;
 }
 
+.overlay.is-redaction-mode {
+  cursor: crosshair;
+}
+
 #pdfCanvas {
   display: block;
 }
@@ -849,6 +862,81 @@ button.primary:disabled:hover {
 .placement-preview {
   position: absolute;
   pointer-events: none;
+}
+
+.redaction-box,
+.redaction-draft {
+  position: absolute;
+  border: 1px solid rgba(11, 20, 29, 0.88);
+  box-sizing: border-box;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(23, 27, 33, 0.98) 0 14px,
+      rgba(97, 102, 109, 0.96) 14px 30px
+    );
+  pointer-events: none;
+}
+
+.redaction-box.is-editable {
+  pointer-events: auto;
+  cursor: move;
+  overflow: visible;
+}
+
+.redaction-box.is-editable::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.redaction-draft {
+  border-style: dashed;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(23, 27, 33, 0.52) 0 14px,
+      rgba(97, 102, 109, 0.5) 14px 30px
+    );
+}
+
+.redaction-resize-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #ffffff;
+  border-radius: 2px;
+  background: #0a1f31;
+  cursor: nwse-resize;
+  padding: 0;
+  z-index: 3;
+}
+
+.redaction-remove-btn {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #ffffff;
+  border-radius: 3px;
+  background: #0a1f31;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  z-index: 3;
+}
+
+.redaction-remove-btn:hover {
+  background: #153850;
 }
 
 .placement-anchor {

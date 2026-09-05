@@ -202,6 +202,196 @@ export function renderMarkers(overlay, placements, previewOptions = {}) {
   });
 }
 
+export function renderRedactions(overlay, redactions = [], options = {}) {
+  const {
+    editable = false,
+    onRemoveRedaction,
+    onRedactionUpdated,
+  } = options;
+
+  redactions.forEach((item, index) => {
+    const box = document.createElement("div");
+    box.className = "redaction-box";
+
+    if (editable) {
+      box.classList.add("is-editable");
+      box.title = "Drag to move";
+
+      const resizeHandle = document.createElement("button");
+      resizeHandle.type = "button";
+      resizeHandle.className = "redaction-resize-handle";
+      resizeHandle.setAttribute("aria-label", "Resize redaction");
+      resizeHandle.title = "Resize";
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "redaction-remove-btn";
+      removeBtn.setAttribute("aria-label", "Remove redaction");
+      removeBtn.title = "Remove redaction";
+      removeBtn.textContent = "x";
+
+      removeBtn.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+
+      removeBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemoveRedaction?.(index);
+      });
+
+      enableRedactionMove({
+        overlay,
+        box,
+        redaction: item,
+        onUpdate: onRedactionUpdated,
+        index,
+      });
+
+      enableRedactionResize({
+        overlay,
+        box,
+        handle: resizeHandle,
+        redaction: item,
+        onUpdate: onRedactionUpdated,
+        index,
+      });
+
+      box.appendChild(resizeHandle);
+      box.appendChild(removeBtn);
+    }
+
+    applyRedactionStyle(box, item);
+    overlay.appendChild(box);
+  });
+}
+
+function applyRedactionStyle(box, redaction) {
+  box.style.left = `${redaction.x * 100}%`;
+  box.style.top = `${redaction.y * 100}%`;
+  box.style.width = `${redaction.w * 100}%`;
+  box.style.height = `${redaction.h * 100}%`;
+}
+
+function enableRedactionMove({ overlay, box, redaction, onUpdate, index }) {
+  box.addEventListener("pointerdown", (event) => {
+    if (event.target.closest(".redaction-resize-handle, .redaction-remove-btn")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const rect = overlay.getBoundingClientRect();
+    const start = { ...redaction };
+
+    box.setPointerCapture(event.pointerId);
+
+    const onMove = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / rect.width;
+      const dy = (moveEvent.clientY - startY) / rect.height;
+      const next = clampRedactionRect({
+        x: start.x + dx,
+        y: start.y + dy,
+        w: start.w,
+        h: start.h,
+      });
+
+      redaction.x = next.x;
+      redaction.y = next.y;
+      applyRedactionStyle(box, redaction);
+      onUpdate?.(index, { ...next }, false);
+    };
+
+    const onEnd = () => {
+      box.removeEventListener("pointermove", onMove);
+      box.removeEventListener("pointerup", onEnd);
+      box.removeEventListener("pointercancel", onEnd);
+      onUpdate?.(index, { ...redaction }, true);
+    };
+
+    box.addEventListener("pointermove", onMove);
+    box.addEventListener("pointerup", onEnd);
+    box.addEventListener("pointercancel", onEnd);
+  });
+}
+
+function enableRedactionResize({ overlay, box, handle, redaction, onUpdate, index }) {
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const rect = overlay.getBoundingClientRect();
+    const start = { ...redaction };
+
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / rect.width;
+      const dy = (moveEvent.clientY - startY) / rect.height;
+
+      const next = clampRedactionRect({
+        x: start.x,
+        y: start.y,
+        w: start.w + dx,
+        h: start.h + dy,
+      });
+
+      redaction.x = next.x;
+      redaction.y = next.y;
+      redaction.w = next.w;
+      redaction.h = next.h;
+      applyRedactionStyle(box, redaction);
+      onUpdate?.(index, { ...next }, false);
+    };
+
+    const onEnd = () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onEnd);
+      handle.removeEventListener("pointercancel", onEnd);
+      onUpdate?.(index, { ...redaction }, true);
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onEnd);
+    handle.addEventListener("pointercancel", onEnd);
+  });
+}
+
+function clampRedactionRect(rect) {
+  const minSize = 0.006;
+  const safeW = Math.max(minSize, Math.min(1, rect.w));
+  const safeH = Math.max(minSize, Math.min(1, rect.h));
+  const safeX = Math.max(0, Math.min(1 - safeW, rect.x));
+  const safeY = Math.max(0, Math.min(1 - safeH, rect.y));
+
+  return {
+    x: safeX,
+    y: safeY,
+    w: safeW,
+    h: safeH,
+  };
+}
+
+export function normalizedRectFromPoints(startPoint, endPoint) {
+  const x1 = Math.max(0, Math.min(1, startPoint.x));
+  const y1 = Math.max(0, Math.min(1, startPoint.y));
+  const x2 = Math.max(0, Math.min(1, endPoint.x));
+  const y2 = Math.max(0, Math.min(1, endPoint.y));
+
+  return {
+    x: Math.min(x1, x2),
+    y: Math.min(y1, y2),
+    w: Math.abs(x2 - x1),
+    h: Math.abs(y2 - y1),
+  };
+}
+
 function clampPlacementToOverlay(point, overlay, previewOptions = {}) {
   const rect = overlay.getBoundingClientRect();
 

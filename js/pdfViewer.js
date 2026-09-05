@@ -22,10 +22,13 @@ export function createPdfViewer({
   overlay,
   pageInfo,
   getPagePlacements,
+  getPageRedactions,
   renderMarkers,
+  renderRedactions,
   setStatus,
   onPdfNameLoaded,
   getPlacementPreviewOptions,
+  getRedactionPreviewOptions,
 }) {
   let isRendering = false;
   let renderPending = false;
@@ -90,6 +93,7 @@ export function createPdfViewer({
 
     pageInfo.textContent = "Page 0 / 0";
     renderMarkers(overlay, [], getPlacementPreviewOptions());
+    renderRedactions(overlay, [], getRedactionPreviewOptions?.());
   }
 
   async function renderPage(pageNumber) {
@@ -117,6 +121,11 @@ export function createPdfViewer({
       getPagePlacements(state, state.currentPage),
       getPlacementPreviewOptions(),
     );
+    renderRedactions(
+      overlay,
+      getPageRedactions(state, state.currentPage),
+      getRedactionPreviewOptions?.(),
+    );
 
     isRendering = false;
     if (renderPending) {
@@ -138,14 +147,17 @@ export function createPdfViewer({
 
     try {
       state.pdfDoc = await openPdfDocument(state.pdfBytes);
+      state.pdfFileName = file.name || "document.pdf";
       state.currentPage = 1;
       state.placementsByPage = new Map();
+      state.redactionsByPage = new Map();
       onPdfNameLoaded(file.name);
       setStatus("PDF loaded. Click on page to place mark.", true);
       await renderPage(state.currentPage);
     } catch (error) {
       state.pdfDoc = null;
       state.pdfBytes = null;
+      state.pdfFileName = null;
       const message =
         error && typeof error.message === "string"
           ? error.message
