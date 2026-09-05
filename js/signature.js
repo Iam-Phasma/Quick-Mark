@@ -1,4 +1,11 @@
-export function initSignaturePad({ signCanvas, signCtx, clearSignBtn, useSignDrawingBtn, setStatus, onUseDrawing }) {
+export function initSignaturePad({
+  signCanvas,
+  signCtx,
+  clearSignBtn,
+  useSignDrawingBtn,
+  setStatus,
+  onUseDrawing,
+}) {
   const drawState = {
     active: false,
     hadStroke: false,
@@ -46,15 +53,18 @@ export function initSignaturePad({ signCanvas, signCtx, clearSignBtn, useSignDra
 
   signCanvas.addEventListener("pointerdown", (event) => {
     event.preventDefault();
+    signCanvas.setPointerCapture(event.pointerId);
     start(event);
   });
   signCanvas.addEventListener("pointermove", (event) => {
     event.preventDefault();
     move(event);
   });
-  signCanvas.addEventListener("pointerup", end);
+  signCanvas.addEventListener("pointerup", (event) => {
+    end();
+    signCanvas.releasePointerCapture(event.pointerId);
+  });
   signCanvas.addEventListener("pointercancel", end);
-  signCanvas.addEventListener("pointerleave", end);
 
   signCanvas.addEventListener("mousedown", (event) => {
     event.preventDefault();
@@ -72,7 +82,7 @@ export function initSignaturePad({ signCanvas, signCtx, clearSignBtn, useSignDra
       event.preventDefault();
       start(event);
     },
-    { passive: false }
+    { passive: false },
   );
   signCanvas.addEventListener(
     "touchmove",
@@ -80,7 +90,7 @@ export function initSignaturePad({ signCanvas, signCtx, clearSignBtn, useSignDra
       event.preventDefault();
       move(event);
     },
-    { passive: false }
+    { passive: false },
   );
   signCanvas.addEventListener("touchend", end);
   signCanvas.addEventListener("touchcancel", end);
