@@ -604,21 +604,15 @@ button.primary:disabled:hover {
   background: #e9f3fc;
 }
 
-.placement-remove {
+.placement-preview .close-btn {
   position: absolute;
   left: 22px;
   top: 0;
-  width: 16px;
-  height: 16px;
-  border: 1px solid #8c1d18;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #8c1d18;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  display: grid;
-  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent url("./close-btn.svg") center / 100% 100% no-repeat;
   transform: translate(-50%, -50%);
   padding: 0;
   cursor: pointer;
@@ -626,8 +620,8 @@ button.primary:disabled:hover {
   z-index: 4;
 }
 
-.placement-remove:hover {
-  background: #fcebea;
+.placement-preview .close-btn:hover {
+  filter: brightness(0.9);
 }
 
 .placement-remove-content {
