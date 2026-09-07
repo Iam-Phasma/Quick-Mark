@@ -75,9 +75,24 @@ export function createPdfViewer({
   }
 
   function renderA4Placeholder() {
-    // A4 at ~96 DPI keeps a realistic paper aspect for empty-state placement preview.
-    const a4Width = 794;
-    const a4Height = 1123;
+    // ISO A4 ratio (210 x 297 mm) preserved regardless of viewport size.
+    const a4Aspect = 210 / 297;
+    let a4Width = 794;
+    let a4Height = 1123;
+
+    const stageSize = getStageContentSize();
+    if (stageSize) {
+      let fittedWidth = stageSize.width;
+      let fittedHeight = fittedWidth / a4Aspect;
+
+      if (fittedHeight > stageSize.height) {
+        fittedHeight = stageSize.height;
+        fittedWidth = fittedHeight * a4Aspect;
+      }
+
+      a4Width = Math.max(1, Math.round(fittedWidth));
+      a4Height = Math.max(1, Math.round(fittedHeight));
+    }
 
     pdfCanvas.width = a4Width;
     pdfCanvas.height = a4Height;
@@ -197,6 +212,11 @@ export function createPdfViewer({
   async function handleViewportChange() {
     if (fitToScreen && state.pdfDoc) {
       await renderPage(state.currentPage);
+      return;
+    }
+
+    if (!state.pdfDoc) {
+      renderA4Placeholder();
     }
   }
 

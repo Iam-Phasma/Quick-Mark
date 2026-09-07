@@ -27,6 +27,11 @@ import {
   resolveToneCssColor,
   resolveDateFontCss,
 } from "./js/styleTokens.js";
+import fitIconUrl from "./icons/fit-icon.svg";
+import fitIconActiveUrl from "./icons/fit-icon-active.svg";
+import layerIconUrl from "./icons/layer.svg";
+import redoIconUrl from "./icons/redo.svg";
+import redactIconUrl from "./icons/redact.svg";
 
 if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
   window.addEventListener("load", () => {
@@ -45,12 +50,38 @@ let signInputSwitcherApi = null;
 let isFitViewEnabled = false;
 let activeTool = "mark";
 
+const TOOLBAR_ICON_URLS = {
+  fitOff: fitIconUrl,
+  fitOn: fitIconActiveUrl,
+  composer: layerIconUrl,
+  clear: redoIconUrl,
+  redact: redactIconUrl,
+};
+
 const COMPOSER_DEFAULTS = {
   boxWidth: 260,
   boxHeight: 160,
   boxPadding: 6,
   dateFontSize: 12,
 };
+
+function hydrateToolbarIcons() {
+  const setButtonIcon = (buttonEl, iconUrl) => {
+    if (!buttonEl || !iconUrl) {
+      return;
+    }
+
+    const icon = buttonEl.querySelector("img");
+    if (icon) {
+      icon.src = iconUrl;
+    }
+  };
+
+  setButtonIcon(els.fitViewToggle, TOOLBAR_ICON_URLS.fitOff);
+  setButtonIcon(els.openComposerBtn, TOOLBAR_ICON_URLS.composer);
+  setButtonIcon(els.clearPlacementsBtn, TOOLBAR_ICON_URLS.clear);
+  setButtonIcon(els.redactionToggleBtn, TOOLBAR_ICON_URLS.redact);
+}
 
 const setUiStatus = (message, ok = false) =>
   setStatus(els.statusEl, message, ok);
@@ -66,8 +97,8 @@ function syncFitToggleUi(isFitEnabled) {
   const fitIcon = els.fitViewToggle.querySelector("img");
   if (fitIcon) {
     fitIcon.src = isFitEnabled
-      ? "./icons/fit-icon-active.svg"
-      : "./icons/fit-icon.svg";
+      ? TOOLBAR_ICON_URLS.fitOn
+      : TOOLBAR_ICON_URLS.fitOff;
   }
 }
 
@@ -818,6 +849,7 @@ function bindEvents() {
 }
 
 setupDropzone();
+hydrateToolbarIcons();
 syncFitToggleUi(false);
 syncRedactionToggleUi(false);
 updateDateFormatOptionSamples();
