@@ -38,20 +38,58 @@
         <h2>1. Upload PDF</h2>
 
         <label class="label" for="pdfInput">Drop pdf here or click upload</label>
-        <div
-          id="pdfDrop"
-          class="dropzone"
-          tabindex="0"
-          role="button"
-          aria-label="Drop pdf here or click upload"
-        >
-          <span id="pdfDropText">Select Files</span>
-          <input id="pdfInput" type="file" accept="application/pdf" />
+        <div class="upload-control-row">
+          <div
+            id="pdfDrop"
+            class="dropzone"
+            tabindex="0"
+            role="button"
+            aria-label="Drop pdf here or click upload"
+          >
+            <span id="pdfDropText">Select Files</span>
+            <input id="pdfInput" type="file" accept="application/pdf" />
+          </div>
+          <button
+            id="clearPdfBtn"
+            class="file-clear-btn"
+            type="button"
+            aria-label="Remove uploaded PDF"
+            title="Remove uploaded PDF"
+            hidden
+          >
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+              />
+            </svg>
+          </button>
         </div>
 
         <hr class="panel-separator" />
 
-        <h2>2. Build Assets</h2>
+        <div class="section-head">
+          <h2>2. Build Assets</h2>
+          <button
+            id="openComposerBtn"
+            class="tool-icon-btn"
+            type="button"
+            aria-label="Open Composer Editor"
+            title="Open Composer Editor"
+          >
+            <img src="./icons/layer.svg" alt="" aria-hidden="true" />
+          </button>
+        </div>
         <div id="assetSwitch" class="asset-switch" aria-label="Asset section switcher" tabindex="0">
           <button type="button" class="asset-tab-btn is-active" data-asset-tab="stamp" aria-pressed="true">Stamp</button>
           <button type="button" class="asset-tab-btn" data-asset-tab="sign" aria-pressed="false">E-sign</button>
@@ -62,7 +100,34 @@
         <div class="asset-panels">
           <section class="asset-panel is-active" data-asset-panel="stamp">
             <label class="label" for="stampInput">Stamp PNG</label>
-            <input id="stampInput" type="file" accept="image/png" />
+            <div class="upload-control-row">
+              <input id="stampInput" type="file" accept="image/png" />
+              <button
+                id="clearStampBtn"
+                class="file-clear-btn"
+                type="button"
+                aria-label="Remove uploaded stamp"
+                title="Remove uploaded stamp"
+                hidden
+              >
+                <svg
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+                  />
+                </svg>
+              </button>
+            </div>
           </section>
 
           <section class="asset-panel" data-asset-panel="sign" hidden>
@@ -88,7 +153,34 @@
 
             <div id="signAttachmentPane" class="sign-mode-pane">
               <label class="label" for="esignInput">Upload E-sign (PNG transparent)</label>
-              <input id="esignInput" type="file" accept="image/png" />
+              <div class="upload-control-row">
+                <input id="esignInput" type="file" accept="image/png" />
+                <button
+                  id="clearEsignBtn"
+                  class="file-clear-btn"
+                  type="button"
+                  aria-label="Remove uploaded e-sign"
+                  title="Remove uploaded e-sign"
+                  hidden
+                >
+                  <svg
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke="currentColor"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div id="signDrawingPane" class="sign-mode-pane" hidden>
@@ -227,15 +319,6 @@
               title="Fit to screen: Off"
             >
               <img src="./icons/fit-icon.svg" alt="" aria-hidden="true" />
-            </button>
-            <button
-              id="openComposerBtn"
-              class="tool-icon-btn"
-              type="button"
-              aria-label="Open Composer Editor"
-              title="Open Composer Editor"
-            >
-              <img src="./icons/layer.svg" alt="" aria-hidden="true" />
             </button>
             <button
               id="clearPlacementsBtn"

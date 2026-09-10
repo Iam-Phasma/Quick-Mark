@@ -108,6 +108,8 @@ function updateExportButton() {
   els.fitViewToggle.disabled = !hasPdf;
   els.clearPlacementsBtn.disabled = !hasPdf;
   els.redactionToggleBtn.disabled = !hasPdf;
+  syncClearPdfButton();
+  syncPageNavButtons();
 
   if (!hasPdf) {
     if (isFitViewEnabled) {
@@ -120,6 +122,72 @@ function updateExportButton() {
       syncRedactionToggleUi(false);
     }
   }
+}
+
+function syncClearPdfButton() {
+  if (!els.clearPdfBtn) {
+    return;
+  }
+
+  const hasPdfInputFile = Boolean(els.pdfInput?.files?.length);
+  els.clearPdfBtn.hidden = !state.pdfDoc && !hasPdfInputFile;
+}
+
+function syncAssetClearButtons() {
+  if (els.clearStampBtn) {
+    const hasStampFile = Boolean(els.stampInput?.files?.length);
+    els.clearStampBtn.hidden = !hasStampFile;
+  }
+
+  if (els.clearEsignBtn) {
+    const hasEsignFile = Boolean(els.esignInput?.files?.length);
+    els.clearEsignBtn.hidden = !hasEsignFile;
+  }
+}
+
+function syncPageNavButtons() {
+  const hasPdf = Boolean(state.pdfDoc);
+  const totalPages = hasPdf ? Number(state.pdfDoc.numPages) || 0 : 0;
+  const currentPage = Number(state.currentPage) || 0;
+
+  els.prevPageBtn.disabled = !hasPdf || currentPage <= 1;
+  els.nextPageBtn.disabled = !hasPdf || currentPage >= totalPages;
+}
+
+function clearLoadedPdf() {
+  state.pdfDoc = null;
+  state.pdfBytes = null;
+  state.pdfFileName = null;
+  state.currentPage = 1;
+  state.placementsByPage = new Map();
+  state.redactionsByPage = new Map();
+
+  els.pdfInput.value = "";
+  els.pdfDropText.textContent = "Select Files";
+
+  viewer.renderA4Placeholder();
+  refreshPreviews();
+  updateExportButton();
+  setUiStatus("PDF removed.");
+}
+
+function clearLoadedStamp() {
+  state.stampDataUrl = null;
+  state.stampAspect = 1;
+  els.stampInput.value = "";
+  syncAssetClearButtons();
+  refreshPreviews();
+  setUiStatus("Stamp removed.");
+}
+
+function clearLoadedEsign() {
+  state.signDataUrl = null;
+  state.signAspect = 0.375;
+  state.signWidthScale = 1;
+  els.esignInput.value = "";
+  syncAssetClearButtons();
+  refreshPreviews();
+  setUiStatus("E-sign attachment removed.");
 }
 
 function syncRedactionToggleUi(isEnabled) {
@@ -593,6 +661,8 @@ function bindEvents() {
       setUiStatus("Stamp PNG loaded.", true);
     } catch (error) {
       setUiStatus(error.message);
+    } finally {
+      syncAssetClearButtons();
     }
   });
 
@@ -611,7 +681,23 @@ function bindEvents() {
       setUiStatus("E-sign PNG loaded and trimmed.", true);
     } catch (error) {
       setUiStatus(error.message);
+    } finally {
+      syncAssetClearButtons();
     }
+  });
+
+  els.clearStampBtn?.addEventListener("click", () => {
+    if (!state.stampDataUrl) {
+      return;
+    }
+    clearLoadedStamp();
+  });
+
+  els.clearEsignBtn?.addEventListener("click", () => {
+    if (!state.signDataUrl && !els.esignInput?.files?.length) {
+      return;
+    }
+    clearLoadedEsign();
   });
 
   let redactDrag = null;
@@ -788,6 +874,13 @@ function bindEvents() {
     });
   });
 
+  els.clearPdfBtn?.addEventListener("click", () => {
+    if (!state.pdfDoc) {
+      return;
+    }
+    clearLoadedPdf();
+  });
+
   els.closeComposerBtn.addEventListener("click", () => {
     els.composerModal.classList.add("hidden");
   });
@@ -815,6 +908,7 @@ function bindEvents() {
     }
 
     state.currentPage -= 1;
+    syncPageNavButtons();
     await viewer.renderPage(state.currentPage);
   });
 
@@ -824,6 +918,7 @@ function bindEvents() {
     }
 
     state.currentPage += 1;
+    syncPageNavButtons();
     await viewer.renderPage(state.currentPage);
   });
 
@@ -898,4 +993,5 @@ bindEvents();
 viewer.renderA4Placeholder();
 initAssetSwitcher();
 syncStyleControlsUi();
+syncAssetClearButtons();
 refreshPreviews();
