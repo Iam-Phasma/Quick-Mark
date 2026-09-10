@@ -49,6 +49,7 @@ let signaturePadApi = null;
 let signInputSwitcherApi = null;
 let isFitViewEnabled = false;
 let activeTool = "mark";
+let suppressStageScrollSync = false;
 
 const TOOLBAR_ICON_URLS = {
   fitOff: fitIconUrl,
@@ -85,6 +86,20 @@ function hydrateToolbarIcons() {
 
 const setUiStatus = (message, ok = false) =>
   setStatus(els.statusEl, message, ok);
+
+function setViewportLoader(isLoading, text = "") {
+  if (!els.viewportLoader) {
+    return;
+  }
+
+  if (els.viewportLoaderText && text) {
+    els.viewportLoaderText.textContent = text;
+  }
+
+  els.viewportLoader.hidden = !isLoading;
+  els.pdfStage?.classList.toggle("is-busy", isLoading);
+  els.pdfStage?.setAttribute("aria-busy", String(Boolean(isLoading)));
+}
 
 function syncFitToggleUi(isFitEnabled) {
   els.fitViewToggle.setAttribute("aria-pressed", String(isFitEnabled));
@@ -154,6 +169,29 @@ function syncPageNavButtons() {
   els.nextPageBtn.disabled = !hasPdf || currentPage >= totalPages;
 }
 
+async function goToPage(targetPage) {
+  if (!state.pdfDoc) {
+    return false;
+  }
+
+  const totalPages = Number(state.pdfDoc.numPages) || 0;
+  const safePage = Math.min(Math.max(1, Number(targetPage) || 1), totalPages);
+  if (safePage === state.currentPage) {
+    return false;
+  }
+
+  suppressStageScrollSync = true;
+  try {
+    await viewer.scrollToPage(safePage, "auto");
+    syncPageNavButtons();
+    return safePage === state.currentPage;
+  } finally {
+    window.requestAnimationFrame(() => {
+      suppressStageScrollSync = false;
+    });
+  }
+}
+
 function clearLoadedPdf() {
   state.pdfDoc = null;
   state.pdfBytes = null;
@@ -175,6 +213,9 @@ function clearLoadedStamp() {
   state.stampDataUrl = null;
   state.stampAspect = 1;
   els.stampInput.value = "";
+  if (els.stampDropText) {
+    els.stampDropText.textContent = "Select Stamp";
+  }
   syncAssetClearButtons();
   refreshPreviews();
   setUiStatus("Stamp removed.");
@@ -185,6 +226,9 @@ function clearLoadedEsign() {
   state.signAspect = 0.375;
   state.signWidthScale = 1;
   els.esignInput.value = "";
+  if (els.esignDropText) {
+    els.esignDropText.textContent = "Select E-sign";
+  }
   syncAssetClearButtons();
   refreshPreviews();
   setUiStatus("E-sign attachment removed.");
@@ -555,6 +599,7 @@ function refreshPreviews() {
     options,
   );
   renderRedactions(els.overlay, redactions, redactionOptions);
+  viewer?.refreshDocumentRedactions?.(state.currentPage, true);
   renderComposerPreview(els.composerPreview, options);
   syncComposerPreviewVisualHeight();
   updateExportButton();
@@ -610,17 +655,29 @@ function setupDropzone() {
 
   els.pdfDrop.addEventListener("drop", async (event) => {
     const file = event.dataTransfer?.files?.[0];
-    await viewer.loadPdf(file);
-    updateExportButton();
+    setViewportLoader(true, "Loading PDF...");
+    try {
+      await viewer.loadPdf(file);
+      updateExportButton();
+    } finally {
+      setViewportLoader(false);
+    }
   });
+
 }
 
 function bindEvents() {
   signInputSwitcherApi = initSignInputSwitcher();
+  let stageScrollRafId = null;
 
   els.pdfInput.addEventListener("change", async (event) => {
-    await viewer.loadPdf(event.target.files?.[0]);
-    updateExportButton();
+    setViewportLoader(true, "Loading PDF...");
+    try {
+      await viewer.loadPdf(event.target.files?.[0]);
+      updateExportButton();
+    } finally {
+      setViewportLoader(false);
+    }
   });
 
   els.fitViewToggle.addEventListener("click", async () => {
@@ -641,12 +698,6 @@ function bindEvents() {
       return;
     }
 
-    if (isRedactionOn && !isFitViewEnabled) {
-      isFitViewEnabled = true;
-      syncFitToggleUi(true);
-      await viewer.setFitToScreen(true);
-    }
-
     refreshPreviews();
   });
 
@@ -656,11 +707,17 @@ function bindEvents() {
         event.target.files?.[0],
         "Stamp",
       );
+      if (els.stampDropText) {
+        els.stampDropText.textContent = event.target.files?.[0]?.name || "Select Stamp";
+      }
       state.stampAspect = await getImageAspect(state.stampDataUrl);
       refreshPreviews();
       setUiStatus("Stamp PNG loaded.", true);
     } catch (error) {
       setUiStatus(error.message);
+      if (!event.target.files?.[0] && els.stampDropText) {
+        els.stampDropText.textContent = "Select Stamp";
+      }
     } finally {
       syncAssetClearButtons();
     }
@@ -672,6 +729,9 @@ function bindEvents() {
         event.target.files?.[0],
         "E-sign",
       );
+      if (els.esignDropText) {
+        els.esignDropText.textContent = event.target.files?.[0]?.name || "Select E-sign";
+      }
       const trimmedSign = await trimTransparentPng(rawSignDataUrl);
       state.signDataUrl = trimmedSign.dataUrl;
       state.signAspect = trimmedSign.aspect;
@@ -681,6 +741,9 @@ function bindEvents() {
       setUiStatus("E-sign PNG loaded and trimmed.", true);
     } catch (error) {
       setUiStatus(error.message);
+      if (!event.target.files?.[0] && els.esignDropText) {
+        els.esignDropText.textContent = "Select E-sign";
+      }
     } finally {
       syncAssetClearButtons();
     }
@@ -702,7 +765,7 @@ function bindEvents() {
 
   let redactDrag = null;
 
-  els.overlay.addEventListener("pointerdown", (event) => {
+  els.pdfStage.addEventListener("pointerdown", async (event) => {
     if (activeTool !== "redact") {
       return;
     }
@@ -712,60 +775,77 @@ function bindEvents() {
       return;
     }
 
+    const pagePoint = viewer.resolvePagePointFromClient(
+      event.clientX,
+      event.clientY,
+    );
+    if (!pagePoint) {
+      return;
+    }
+
     event.preventDefault();
-    els.overlay.setPointerCapture(event.pointerId);
-    const start = canvasPointFromEvent(event, els.overlay);
-    redactDrag = { start, draftEl: null };
+
+    if (pagePoint.pageNumber !== state.currentPage) {
+      suppressStageScrollSync = true;
+      await viewer.renderPage(pagePoint.pageNumber);
+      syncPageNavButtons();
+      window.requestAnimationFrame(() => {
+        suppressStageScrollSync = false;
+      });
+    }
+
+    redactDrag = {
+      pageNumber: pagePoint.pageNumber,
+      start: { x: pagePoint.x, y: pagePoint.y },
+      draftEl: null,
+    };
 
     const draft = document.createElement("div");
     draft.className = "redaction-draft";
     els.overlay.appendChild(draft);
     redactDrag.draftEl = draft;
-  });
 
-  els.overlay.addEventListener("pointermove", (event) => {
-    if (activeTool !== "redact" || !redactDrag?.draftEl) {
-      return;
-    }
+    const onMove = (moveEvent) => {
+      if (activeTool !== "redact" || !redactDrag?.draftEl) {
+        return;
+      }
 
-    const end = canvasPointFromEvent(event, els.overlay);
-    const rect = normalizedRectFromPoints(redactDrag.start, end);
-    redactDrag.draftEl.style.left = `${rect.x * 100}%`;
-    redactDrag.draftEl.style.top = `${rect.y * 100}%`;
-    redactDrag.draftEl.style.width = `${rect.w * 100}%`;
-    redactDrag.draftEl.style.height = `${rect.h * 100}%`;
-  });
+      const end = canvasPointFromEvent(moveEvent, els.overlay);
+      const rect = normalizedRectFromPoints(redactDrag.start, end);
+      redactDrag.draftEl.style.left = `${rect.x * 100}%`;
+      redactDrag.draftEl.style.top = `${rect.y * 100}%`;
+      redactDrag.draftEl.style.width = `${rect.w * 100}%`;
+      redactDrag.draftEl.style.height = `${rect.h * 100}%`;
+    };
 
-  const commitRedaction = (event) => {
-    if (activeTool !== "redact" || !redactDrag) {
-      return;
-    }
+    const onEnd = (endEvent) => {
+      if (!redactDrag) {
+        return;
+      }
 
-    if (els.overlay.hasPointerCapture?.(event.pointerId)) {
-      els.overlay.releasePointerCapture(event.pointerId);
-    }
+      const end = canvasPointFromEvent(endEvent, els.overlay);
+      const rect = normalizedRectFromPoints(redactDrag.start, end);
+      const targetPage = redactDrag.pageNumber;
 
-    const end = canvasPointFromEvent(event, els.overlay);
-    const rect = normalizedRectFromPoints(redactDrag.start, end);
-    redactDrag.draftEl?.remove();
-    redactDrag = null;
+      redactDrag.draftEl?.remove();
+      redactDrag = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onEnd);
+      window.removeEventListener("pointercancel", onEnd);
 
-    if (rect.w < 0.006 || rect.h < 0.006) {
-      return;
-    }
+      if (rect.w < 0.006 || rect.h < 0.006) {
+        return;
+      }
 
-    const redactions = getPageRedactions(state, state.currentPage);
-    redactions.push(rect);
-    refreshPreviews();
-    setUiStatus(`Redaction added on page ${state.currentPage}.`, true);
-  };
+      const redactions = getPageRedactions(state, targetPage);
+      redactions.push(rect);
+      refreshPreviews();
+      setUiStatus(`Redaction added on page ${targetPage}.`, true);
+    };
 
-  els.overlay.addEventListener("pointerup", commitRedaction);
-  els.overlay.addEventListener("pointercancel", () => {
-    if (redactDrag?.draftEl) {
-      redactDrag.draftEl.remove();
-    }
-    redactDrag = null;
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onEnd);
+    window.addEventListener("pointercancel", onEnd);
   });
 
   els.overlay.addEventListener("click", (event) => {
@@ -902,27 +982,30 @@ function bindEvents() {
     viewer.handleViewportChange();
   });
 
-  els.prevPageBtn.addEventListener("click", async () => {
-    if (!state.pdfDoc || state.currentPage <= 1) {
+  els.pdfStage.addEventListener("scroll", () => {
+    if (!state.pdfDoc || stageScrollRafId || suppressStageScrollSync) {
       return;
     }
 
-    state.currentPage -= 1;
-    syncPageNavButtons();
-    await viewer.renderPage(state.currentPage);
+    stageScrollRafId = window.requestAnimationFrame(async () => {
+      stageScrollRafId = null;
+      const didChangePage = await viewer.syncPageFromScroll();
+      if (didChangePage) {
+        syncPageNavButtons();
+      }
+    });
+  });
+
+  els.prevPageBtn.addEventListener("click", async () => {
+    await goToPage(state.currentPage - 1);
   });
 
   els.nextPageBtn.addEventListener("click", async () => {
-    if (!state.pdfDoc || state.currentPage >= state.pdfDoc.numPages) {
-      return;
-    }
-
-    state.currentPage += 1;
-    syncPageNavButtons();
-    await viewer.renderPage(state.currentPage);
+    await goToPage(state.currentPage + 1);
   });
 
   els.exportBtn.addEventListener("click", async () => {
+    setViewportLoader(true, "Preparing export...");
     try {
       await exportMarkedPdf({
         state,
@@ -939,6 +1022,8 @@ function bindEvents() {
       const message =
         error instanceof Error ? error.message : "Unknown export error";
       setUiStatus(`Could not export PDF. ${message}`);
+    } finally {
+      setViewportLoader(false);
     }
   });
 }
