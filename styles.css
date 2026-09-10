@@ -200,6 +200,17 @@ button.primary:disabled:hover {
   align-items: center;
   justify-content: center;
   padding: 0 12px;
+  min-width: 0;
+}
+
+#pdfDropText,
+#stampDropText,
+#esignDropText {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .file-clear-btn {
@@ -631,13 +642,9 @@ button.primary:disabled:hover {
   min-height: 0;
   width: 100%;
   max-width: 100%;
-  border: 1px solid #c6d2dd;
-  border-radius: 6px;
-  background:
-    linear-gradient(90deg, rgba(10, 34, 52, 0.05) 1px, transparent 1px) 0 0 /
-      18px 18px,
-    linear-gradient(rgba(10, 34, 52, 0.05) 1px, transparent 1px) 0 0 / 18px 18px,
-    #eef3f7;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   justify-self: center;
   margin: 0;
   overflow: hidden;
@@ -921,19 +928,39 @@ button.primary:disabled:hover {
   align-items: start;
 }
 
+.pdf-stage.is-busy {
+  cursor: progress;
+}
+
 .pdf-layer {
   position: relative;
-  background: #ffffff;
-  border: 1px solid #bec8d2;
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.06);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .overlay {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
   pointer-events: auto;
+  z-index: 2;
+}
+
+.redaction-doc-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.redaction-static-box {
+  pointer-events: none;
 }
 
 .overlay.is-redaction-mode {
@@ -941,6 +968,36 @@ button.primary:disabled:hover {
 }
 
 #pdfCanvas {
+  display: block;
+}
+
+.viewport-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(232, 237, 242, 0.38);
+  backdrop-filter: blur(0.6px);
+}
+
+.viewport-loader[hidden] {
+  display: none !important;
+}
+
+.viewport-loader-content {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0;
+  color: #214a8a;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.viewport-loader-content svg {
+  width: 34px;
+  height: 34px;
   display: block;
 }
 

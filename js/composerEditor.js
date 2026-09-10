@@ -15,16 +15,21 @@ const SIZE_CONFIG = {
   date: { label: "Size", min: 9, max: 22 },
 };
 
-const DRAG_SWAP_ZONE_RATIO = 0.34;
+const DRAG_REORDER_ACTIVATION_PX = 18;
+const DRAG_INSERT_HYSTERESIS_PX = 12;
 
 export function initComposerEditor({ container, state, getLayerSize, setLayerSize, onChange }) {
   let dragIndex = null;
   let disposeDragGhost = null;
+  let dragStartClientY = null;
+  let isDragReorderActive = false;
 
   const endDragSession = () => {
     dragIndex = null;
     disposeDragGhost?.();
     disposeDragGhost = null;
+    dragStartClientY = null;
+    isDragReorderActive = false;
     container.querySelectorAll(".component-card").forEach((item) => {
       item.classList.remove("is-drop-target");
       item.classList.remove("is-dragging");
@@ -32,6 +37,65 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
       item.setAttribute("aria-grabbed", "false");
     });
   };
+
+  const getDragTargetIndex = (pointerClientY) => {
+    const cards = Array.from(container.querySelectorAll(".component-card"));
+    if (!cards.length || dragIndex === null) {
+      return null;
+    }
+
+    const draggingCard = cards[dragIndex];
+    if (!draggingCard) {
+      return null;
+    }
+
+    const otherCards = cards.filter((card) => card !== draggingCard);
+    let targetIndex = otherCards.length;
+
+    for (let i = 0; i < otherCards.length; i += 1) {
+      const rect = otherCards[i].getBoundingClientRect();
+      const midpointY = rect.top + rect.height / 2;
+      if (pointerClientY < midpointY - DRAG_INSERT_HYSTERESIS_PX) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    return targetIndex;
+  };
+
+  container.addEventListener("dragover", (event) => {
+    if (dragIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (!isDragReorderActive && Number.isFinite(dragStartClientY)) {
+      const dragDistance = Math.abs(event.clientY - dragStartClientY);
+      if (dragDistance < DRAG_REORDER_ACTIVATION_PX) {
+        return;
+      }
+      isDragReorderActive = true;
+    }
+
+    const targetIndex = getDragTargetIndex(event.clientY);
+    if (targetIndex === null || targetIndex === dragIndex) {
+      return;
+    }
+
+    moveLayerLive(dragIndex, targetIndex);
+    dragIndex = targetIndex;
+  });
+
+  container.addEventListener("drop", (event) => {
+    if (dragIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    endDragSession();
+  });
 
   // Fallback cleanup in case a drag is canceled outside card events.
   document.addEventListener(
@@ -132,6 +196,8 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
       handle.addEventListener("dragstart", (event) => {
         disposeDragGhost?.();
         dragIndex = index;
+        dragStartClientY = Number.isFinite(event.clientY) ? event.clientY : null;
+        isDragReorderActive = false;
         card.classList.add("is-dragging");
         card.classList.add("is-drag-source");
         card.setAttribute("aria-grabbed", "true");
@@ -150,35 +216,6 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
         endDragSession();
       });
 
-      card.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        const overIndex = Number(card.dataset.index);
-
-        if (
-          dragIndex !== null
-          && Number.isFinite(overIndex)
-          && dragIndex !== overIndex
-          && shouldSwapOnDragOver({
-            event,
-            card,
-            fromIndex: dragIndex,
-            toIndex: overIndex,
-          })
-        ) {
-          moveLayerLive(dragIndex, overIndex);
-          dragIndex = overIndex;
-        }
-      });
-
-      card.addEventListener("dragleave", () => {
-        card.classList.remove("is-drop-target");
-      });
-
-      card.addEventListener("drop", (event) => {
-        event.preventDefault();
-        endDragSession();
-      });
-
       card.appendChild(row);
       card.appendChild(controls);
       container.appendChild(card);
@@ -192,9 +229,15 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
 
     const cards = Array.from(container.querySelectorAll(".component-card"));
     const movingCard = cards[fromIndex];
-    const targetCard = cards[toIndex];
+    const targetCard = cards
+      .filter((card) => card !== movingCard)
+      .at(toIndex) || null;
 
-    if (!movingCard || !targetCard || movingCard === targetCard) {
+    if (!movingCard) {
+      return;
+    }
+
+    if (fromIndex === toIndex) {
       return;
     }
 
@@ -205,11 +248,7 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
     next.splice(toIndex, 0, moved);
     state.layerOrder = next;
 
-    if (fromIndex < toIndex) {
-      container.insertBefore(movingCard, targetCard.nextSibling);
-    } else {
-      container.insertBefore(movingCard, targetCard);
-    }
+    container.insertBefore(movingCard, targetCard);
 
     syncCardMeta();
     animateCardSwitch(previousTops);
@@ -265,24 +304,6 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
   };
 }
 
-function shouldSwapOnDragOver({ event, card, fromIndex, toIndex }) {
-  const rect = card.getBoundingClientRect();
-  if (rect.height <= 0) {
-    return true;
-  }
-
-  const pointerRatioY = (event.clientY - rect.top) / rect.height;
-  if (!Number.isFinite(pointerRatioY)) {
-    return false;
-  }
-
-  if (toIndex > fromIndex) {
-    return pointerRatioY >= 1 - DRAG_SWAP_ZONE_RATIO;
-  }
-
-  return pointerRatioY <= DRAG_SWAP_ZONE_RATIO;
-}
-
 function createDragGhostFromCard(card) {
   const ghost = card.cloneNode(true);
   const rect = card.getBoundingClientRect();
@@ -294,7 +315,7 @@ function createDragGhostFromCard(card) {
   ghost.style.width = `${Math.max(220, Math.round(rect.width))}px`;
   ghost.style.pointerEvents = "none";
   ghost.style.opacity = "0.96";
-  ghost.style.transform = "rotate(-1deg)";
+  ghost.style.transform = "none";
   ghost.style.boxShadow = "0 14px 28px rgba(16, 35, 51, 0.26)";
   ghost.style.borderColor = "#477ca8";
   ghost.style.background = "#f7fbff";
