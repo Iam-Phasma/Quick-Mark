@@ -2,7 +2,8 @@
 
 Quick Mark is a fast, desktop-first PDF marking app for clean, repeatable document annotations without clutter.
 
-Open: https://iam-phasma.github.io/Quick-Mark/
+Vercel: https://quick-mark-mu.vercel.app/ \
+Pages: https://iam-phasma.github.io/Quick-Mark/
 
 ## Why Quick Mark
 
