@@ -5,6 +5,9 @@ const isCi = Boolean(process.env.GITHUB_ACTIONS);
 
 export default defineConfig({
   base: isCi ? `/${repoName}/` : "/",
+  define: {
+    global: "globalThis",
+  },
   build: {
     outDir: "dist",
   },

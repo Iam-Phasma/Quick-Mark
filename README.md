@@ -59,3 +59,10 @@ npm run preview
 - Very large or graphics-heavy PDFs may export slower on lower-end devices.
 - Current workflow is optimized for PDF input and PNG stamp/sign assets.
 
+## Attributions
+
+- Toolbar and UI SVG icons are adapted from Flowbite Icons: https://flowbite.com/icons/
+- Composer layer drag-and-drop uses Dragula: https://bevacqua.github.io/dragula/
+
+See `THIRD_PARTY_NOTICES.md` and `icons/ATTRIBUTION.md` for citation and license notes.
+

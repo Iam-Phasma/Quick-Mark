@@ -1,3 +1,5 @@
+import dragula from "dragula";
+
 const LAYER_INFO = {
   stamp: "Stamp",
   date: "Date",
@@ -15,122 +17,86 @@ const SIZE_CONFIG = {
   date: { label: "Size", min: 9, max: 22 },
 };
 
-const DRAG_REORDER_ACTIVATION_PX = 18;
-const DRAG_INSERT_HYSTERESIS_PX = 12;
-
 export function initComposerEditor({ container, state, getLayerSize, setLayerSize, onChange }) {
-  let dragIndex = null;
-  let disposeDragGhost = null;
-  let dragStartClientY = null;
-  let isDragReorderActive = false;
+  let drake = null;
 
-  const endDragSession = () => {
-    dragIndex = null;
-    disposeDragGhost?.();
-    disposeDragGhost = null;
-    dragStartClientY = null;
-    isDragReorderActive = false;
+  const clearDragVisualState = () => {
     container.querySelectorAll(".component-card").forEach((item) => {
       item.classList.remove("is-drop-target");
       item.classList.remove("is-dragging");
-      item.classList.remove("is-drag-source");
       item.setAttribute("aria-grabbed", "false");
     });
   };
 
-  const getDragTargetIndex = (pointerClientY) => {
+  const syncOrderFromDom = () => {
     const cards = Array.from(container.querySelectorAll(".component-card"));
-    if (!cards.length || dragIndex === null) {
-      return null;
+    const nextOrder = cards.map((card) => card.dataset.layerKey).filter(Boolean);
+
+    if (nextOrder.length !== state.layerOrder.length) {
+      syncCardMeta();
+      return;
     }
 
-    const draggingCard = cards[dragIndex];
-    if (!draggingCard) {
-      return null;
+    const isChanged = nextOrder.some((layerKey, index) => layerKey !== state.layerOrder[index]);
+    if (!isChanged) {
+      syncCardMeta();
+      return;
     }
 
-    const otherCards = cards.filter((card) => card !== draggingCard);
-    let targetIndex = otherCards.length;
-
-    for (let i = 0; i < otherCards.length; i += 1) {
-      const rect = otherCards[i].getBoundingClientRect();
-      const midpointY = rect.top + rect.height / 2;
-      if (pointerClientY < midpointY - DRAG_INSERT_HYSTERESIS_PX) {
-        targetIndex = i;
-        break;
-      }
-    }
-
-    return targetIndex;
+    state.layerOrder = [...nextOrder];
+    syncCardMeta();
+    onChange();
   };
 
-  container.addEventListener("dragover", (event) => {
-    if (dragIndex === null) {
-      return;
-    }
+  const initDragLayerSorting = () => {
+    drake?.destroy();
 
-    event.preventDefault();
+    drake = dragula([container], {
+      direction: "vertical",
+      revertOnSpill: true,
+      mirrorContainer: document.body,
+      ignoreInputTextSelection: true,
+      moves: (_el, _source, handle) => {
+        return Boolean(handle?.classList?.contains("layer-handle"));
+      },
+    });
 
-    if (!isDragReorderActive && Number.isFinite(dragStartClientY)) {
-      const dragDistance = Math.abs(event.clientY - dragStartClientY);
-      if (dragDistance < DRAG_REORDER_ACTIVATION_PX) {
+    drake.on("drag", (item) => {
+      clearDragVisualState();
+      item.classList.add("is-dragging");
+      item.setAttribute("aria-grabbed", "true");
+    });
+
+    drake.on("over", (item, target, source) => {
+      if (target !== container || source !== container) {
         return;
       }
-      isDragReorderActive = true;
-    }
 
-    const targetIndex = getDragTargetIndex(event.clientY);
-    if (targetIndex === null || targetIndex === dragIndex) {
-      return;
-    }
+      container.querySelectorAll(".component-card").forEach((card) => {
+        card.classList.toggle("is-drop-target", card !== item);
+      });
+    });
 
-    moveLayerLive(dragIndex, targetIndex);
-    dragIndex = targetIndex;
-  });
-
-  container.addEventListener("drop", (event) => {
-    if (dragIndex === null) {
-      return;
-    }
-
-    event.preventDefault();
-    endDragSession();
-  });
-
-  // Fallback cleanup in case a drag is canceled outside card events.
-  document.addEventListener(
-    "dragend",
-    () => {
-      if (dragIndex !== null) {
-        endDragSession();
+    drake.on("drop", (item, target) => {
+      if (target === container) {
+        syncOrderFromDom();
       }
-    },
-    true
-  );
 
-  document.addEventListener(
-    "drop",
-    () => {
-      if (dragIndex !== null) {
-        endDragSession();
-      }
-    },
-    true
-  );
+      clearDragVisualState();
+    });
 
-  window.addEventListener("blur", () => {
-    if (dragIndex !== null) {
-      endDragSession();
-    }
-  });
+    drake.on("cancel", () => {
+      clearDragVisualState();
+      syncCardMeta();
+    });
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden && dragIndex !== null) {
-      endDragSession();
-    }
-  });
+    drake.on("dragend", () => {
+      clearDragVisualState();
+    });
+  };
 
   render();
+  initDragLayerSorting();
 
   function render() {
     container.innerHTML = "";
@@ -150,7 +116,6 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
       handle.className = "layer-handle";
       handle.textContent = "::";
       handle.setAttribute("aria-hidden", "true");
-      handle.draggable = true;
 
       const name = document.createElement("span");
       name.className = "layer-name";
@@ -193,66 +158,10 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
       controls.appendChild(yControl);
       controls.appendChild(sizeControl);
 
-      handle.addEventListener("dragstart", (event) => {
-        disposeDragGhost?.();
-        dragIndex = index;
-        dragStartClientY = Number.isFinite(event.clientY) ? event.clientY : null;
-        isDragReorderActive = false;
-        card.classList.add("is-dragging");
-        card.classList.add("is-drag-source");
-        card.setAttribute("aria-grabbed", "true");
-
-        if (event.dataTransfer) {
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", String(index));
-
-          const { element, dispose } = createDragGhostFromCard(card);
-          disposeDragGhost = dispose;
-          event.dataTransfer.setDragImage(element, 24, 20);
-        }
-      });
-
-      handle.addEventListener("dragend", () => {
-        endDragSession();
-      });
-
       card.appendChild(row);
       card.appendChild(controls);
       container.appendChild(card);
     });
-  }
-
-  function moveLayerLive(fromIndex, toIndex) {
-    if (toIndex < 0 || toIndex >= state.layerOrder.length) {
-      return;
-    }
-
-    const cards = Array.from(container.querySelectorAll(".component-card"));
-    const movingCard = cards[fromIndex];
-    const targetCard = cards
-      .filter((card) => card !== movingCard)
-      .at(toIndex) || null;
-
-    if (!movingCard) {
-      return;
-    }
-
-    if (fromIndex === toIndex) {
-      return;
-    }
-
-    const previousTops = new Map(cards.map((item) => [item, item.getBoundingClientRect().top]));
-
-    const next = [...state.layerOrder];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    state.layerOrder = next;
-
-    container.insertBefore(movingCard, targetCard);
-
-    syncCardMeta();
-    animateCardSwitch(previousTops);
-    onChange();
   }
 
   function syncCardMeta() {
@@ -268,67 +177,12 @@ export function initComposerEditor({ container, state, getLayerSize, setLayerSiz
     });
   }
 
-  function animateCardSwitch(previousTops) {
-    const cards = Array.from(container.querySelectorAll(".component-card"));
-
-    cards.forEach((card) => {
-      const previousTop = previousTops.get(card);
-      if (typeof previousTop !== "number") {
-        return;
-      }
-
-      const nextTop = card.getBoundingClientRect().top;
-      const deltaY = previousTop - nextTop;
-      if (!deltaY) {
-        return;
-      }
-
-      card.style.transition = "none";
-      card.style.transform = `translateY(${deltaY}px)`;
-
-      requestAnimationFrame(() => {
-        card.style.transition = "transform 160ms ease";
-        card.style.transform = "";
-      });
-
-      const clearTransition = () => {
-        card.style.transition = "";
-      };
-
-      card.addEventListener("transitionend", clearTransition, { once: true });
-    });
-  }
 
   return {
     rerender: render,
-  };
-}
-
-function createDragGhostFromCard(card) {
-  const ghost = card.cloneNode(true);
-  const rect = card.getBoundingClientRect();
-
-  ghost.classList.add("component-card-drag-ghost");
-  ghost.style.position = "fixed";
-  ghost.style.left = "-9999px";
-  ghost.style.top = "-9999px";
-  ghost.style.width = `${Math.max(220, Math.round(rect.width))}px`;
-  ghost.style.pointerEvents = "none";
-  ghost.style.opacity = "0.96";
-  ghost.style.transform = "none";
-  ghost.style.boxShadow = "0 14px 28px rgba(16, 35, 51, 0.26)";
-  ghost.style.borderColor = "#477ca8";
-  ghost.style.background = "#f7fbff";
-  ghost.style.zIndex = "9999";
-
-  document.body.appendChild(ghost);
-
-  return {
-    element: ghost,
-    dispose: () => {
-      if (ghost.parentNode) {
-        ghost.parentNode.removeChild(ghost);
-      }
+    destroy: () => {
+      drake?.destroy();
+      drake = null;
     },
   };
 }

@@ -576,14 +576,31 @@ button.primary:disabled:hover {
   box-shadow: 0 8px 20px rgba(16, 35, 51, 0.2);
 }
 
-.component-card.is-drag-source {
-  opacity: 0;
-}
-
 .component-card.is-drop-target {
   border-color: #477ca8;
   background: #eef6fc;
   box-shadow: 0 0 0 2px rgba(71, 124, 168, 0.16);
+}
+
+.gu-mirror {
+  position: fixed !important;
+  margin: 0 !important;
+  z-index: 9999 !important;
+  opacity: 0.96;
+  pointer-events: none;
+  box-shadow: 0 14px 28px rgba(16, 35, 51, 0.26);
+}
+
+.gu-hide {
+  display: none !important;
+}
+
+.gu-unselectable {
+  user-select: none !important;
+}
+
+.gu-transit {
+  opacity: 0 !important;
 }
 
 .modal {
