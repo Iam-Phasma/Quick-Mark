@@ -50,6 +50,7 @@ let signInputSwitcherApi = null;
 let isFitViewEnabled = false;
 let activeTool = "mark";
 let suppressStageScrollSync = false;
+let isExporting = false;
 
 const TOOLBAR_ICON_URLS = {
   fitOff: fitIconUrl,
@@ -65,6 +66,238 @@ const COMPOSER_DEFAULTS = {
   boxPadding: 6,
   dateFontSize: 12,
 };
+
+const USER_ASSET_CACHE_NAME = "quickmark-user-assets-v1";
+const USER_ASSET_CACHE_KEYS = {
+  stamp: "/__quickmark_user_asset__/stamp.png",
+  sign: "/__quickmark_user_asset__/sign.png",
+};
+
+function dataUrlToResponse(dataUrl, fileName = "", source = "", width = "") {
+  const [meta, data] = String(dataUrl || "").split(",", 2);
+  if (!meta || !data) {
+    return null;
+  }
+
+  const mimeMatch = meta.match(/data:(.*?);base64/i);
+  const mimeType = mimeMatch?.[1] || "application/octet-stream";
+  let binaryString = "";
+
+  try {
+    binaryString = atob(data);
+  } catch {
+    return null;
+  }
+
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i += 1) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": mimeType,
+      "Cache-Control": "no-store",
+      "X-QuickMark-Asset-Name": encodeURIComponent(fileName || ""),
+      "X-QuickMark-Asset-Source": encodeURIComponent(source || ""),
+      "X-QuickMark-Asset-Width": encodeURIComponent(String(width || "")),
+    },
+  });
+}
+
+async function saveCurrentAssetsToCache() {
+  if (!("caches" in window)) {
+    setUiStatus("Cache Storage is not available in this browser.");
+    return;
+  }
+
+  const assets = [
+    {
+      key: USER_ASSET_CACHE_KEYS.stamp,
+      dataUrl: state.stampDataUrl,
+      fileName: state.stampFileName || "",
+      source: "",
+      width: state.stampWidth,
+      label: "stamp",
+    },
+    {
+      key: USER_ASSET_CACHE_KEYS.sign,
+      dataUrl: state.signDataUrl,
+      fileName: state.signFileName || "",
+      source: state.signSource || "attachment",
+      width: state.signWidth,
+      label: "signature",
+    },
+  ];
+
+  const cache = await caches.open(USER_ASSET_CACHE_NAME);
+  const savedLabels = [];
+  const removedLabels = [];
+
+  for (const asset of assets) {
+    if (!asset.dataUrl) {
+      const removed = await cache.delete(asset.key);
+      if (removed) {
+        removedLabels.push(asset.label);
+      }
+      continue;
+    }
+
+    const response = dataUrlToResponse(
+      asset.dataUrl,
+      asset.fileName,
+      asset.source,
+      asset.width,
+    );
+    if (!response) {
+      continue;
+    }
+
+    await cache.put(asset.key, response);
+    savedLabels.push(asset.label);
+  }
+
+  if (!savedLabels.length && !removedLabels.length) {
+    setUiStatus("No loaded assets to cache yet.");
+    return;
+  }
+
+  const savedSummary = savedLabels.length
+    ? `Saved ${savedLabels.join(" and ")} in local cache.`
+    : "";
+  const removedSummary = removedLabels.length
+    ? `Removed cached ${removedLabels.join(" and ")}.`
+    : "";
+  const message = [savedSummary, removedSummary].filter(Boolean).join(" ");
+  setUiStatus(message || "Cache updated.", true);
+}
+
+async function hasAnyCachedUserAssets() {
+  if (!("caches" in window)) {
+    return false;
+  }
+
+  const cache = await caches.open(USER_ASSET_CACHE_NAME);
+  const stampMatch = await cache.match(USER_ASSET_CACHE_KEYS.stamp);
+  const signMatch = await cache.match(USER_ASSET_CACHE_KEYS.sign);
+  return Boolean(stampMatch || signMatch);
+}
+
+async function clearCachedUserAssets() {
+  if (!("caches" in window)) {
+    setUiStatus("Cache Storage is not available in this browser.");
+    return false;
+  }
+
+  const cache = await caches.open(USER_ASSET_CACHE_NAME);
+  const removedStamp = await cache.delete(USER_ASSET_CACHE_KEYS.stamp);
+  const removedSign = await cache.delete(USER_ASSET_CACHE_KEYS.sign);
+  const removedAny = removedStamp || removedSign;
+
+  if (removedAny) {
+    setUiStatus("Cleared cached stamp/sign assets.", true);
+  } else {
+    setUiStatus("No cached assets to clear.");
+  }
+
+  return removedAny;
+}
+
+async function syncAssetsCacheIfEnabled() {
+  if (!els.saveAssetsCacheSwitch?.checked) {
+    return;
+  }
+
+  await saveCurrentAssetsToCache();
+}
+
+function responseToDataUrl(response) {
+  return new Promise((resolve) => {
+    response
+      .blob()
+      .then((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(typeof reader.result === "string" ? reader.result : null);
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => resolve(null));
+  });
+}
+
+async function restoreCachedAssetsToState() {
+  if (!("caches" in window)) {
+    return;
+  }
+
+  const cache = await caches.open(USER_ASSET_CACHE_NAME);
+  const [stampResponse, signResponse] = await Promise.all([
+    cache.match(USER_ASSET_CACHE_KEYS.stamp),
+    cache.match(USER_ASSET_CACHE_KEYS.sign),
+  ]);
+
+  let restoredCount = 0;
+
+  if (stampResponse) {
+    const stampDataUrl = await responseToDataUrl(stampResponse);
+    const stampNameRaw = stampResponse.headers.get("X-QuickMark-Asset-Name") || "";
+    const stampName = stampNameRaw ? decodeURIComponent(stampNameRaw) : "";
+    const stampWidthRaw = stampResponse.headers.get("X-QuickMark-Asset-Width") || "";
+    const stampWidth = Number.parseFloat(stampWidthRaw);
+    if (stampDataUrl) {
+      state.stampDataUrl = stampDataUrl;
+      state.stampAspect = await getImageAspect(stampDataUrl);
+      state.stampFileName = stampName || null;
+      if (Number.isFinite(stampWidth) && stampWidth > 0) {
+        state.stampWidth = stampWidth;
+      }
+      if (els.stampDropText) {
+        els.stampDropText.textContent = stampName || "Cached Stamp";
+      }
+      restoredCount += 1;
+    }
+  }
+
+  if (signResponse) {
+    const signDataUrl = await responseToDataUrl(signResponse);
+    const signNameRaw = signResponse.headers.get("X-QuickMark-Asset-Name") || "";
+    const signName = signNameRaw ? decodeURIComponent(signNameRaw) : "";
+    const signSourceRaw = signResponse.headers.get("X-QuickMark-Asset-Source") || "";
+    const signSource = signSourceRaw ? decodeURIComponent(signSourceRaw) : "";
+    const signWidthRaw = signResponse.headers.get("X-QuickMark-Asset-Width") || "";
+    const signWidth = Number.parseFloat(signWidthRaw);
+    if (signDataUrl) {
+      state.signDataUrl = signDataUrl;
+      state.signAspect = await getImageAspect(signDataUrl);
+      // Cached sign image is already final, so no crop compensation is needed.
+      state.signWidthScale = 1;
+      state.signFileName = signName || null;
+      state.signSource = signSource === "drawing" ? "drawing" : "attachment";
+      if (Number.isFinite(signWidth) && signWidth > 0) {
+        state.signWidth = signWidth;
+      }
+      if (els.esignDropText) {
+        els.esignDropText.textContent = signName || "Cached E-sign";
+      }
+      if (state.signSource === "drawing") {
+        signaturePadApi?.loadFromDataUrl?.(signDataUrl);
+        signInputSwitcherApi?.setMode("drawing");
+      } else {
+        signInputSwitcherApi?.setMode("attachment");
+      }
+      restoredCount += 1;
+    }
+  }
+
+  syncAssetClearButtons();
+
+  if (restoredCount > 0) {
+    refreshPreviews();
+    setUiStatus(`Restored ${restoredCount} cached asset${restoredCount > 1 ? "s" : ""}.`, true);
+  }
+}
 
 function hydrateToolbarIcons() {
   const setButtonIcon = (buttonEl, iconUrl) => {
@@ -119,7 +352,7 @@ function syncFitToggleUi(isFitEnabled) {
 
 function updateExportButton() {
   const hasPdf = Boolean(state.pdfDoc);
-  els.exportBtn.disabled = !hasPdf;
+  els.exportBtn.disabled = !hasPdf || isExporting;
   els.fitViewToggle.disabled = !hasPdf;
   els.clearPlacementsBtn.disabled = !hasPdf;
   els.redactionToggleBtn.disabled = !hasPdf;
@@ -139,6 +372,16 @@ function updateExportButton() {
   }
 }
 
+function setExportLoading(isLoading) {
+  isExporting = Boolean(isLoading);
+  els.exportBtn?.classList.toggle("is-loading", isExporting);
+  els.exportBtn?.setAttribute("aria-busy", String(isExporting));
+  if (els.exportBtnLabel) {
+    els.exportBtnLabel.textContent = isExporting ? "Exporting" : "Export";
+  }
+  updateExportButton();
+}
+
 function syncClearPdfButton() {
   if (!els.clearPdfBtn) {
     return;
@@ -151,12 +394,12 @@ function syncClearPdfButton() {
 function syncAssetClearButtons() {
   if (els.clearStampBtn) {
     const hasStampFile = Boolean(els.stampInput?.files?.length);
-    els.clearStampBtn.hidden = !hasStampFile;
+    els.clearStampBtn.hidden = !hasStampFile && !state.stampDataUrl;
   }
 
   if (els.clearEsignBtn) {
     const hasEsignFile = Boolean(els.esignInput?.files?.length);
-    els.clearEsignBtn.hidden = !hasEsignFile;
+    els.clearEsignBtn.hidden = !hasEsignFile && !state.signDataUrl;
   }
 }
 
@@ -211,18 +454,22 @@ function clearLoadedPdf() {
 
 function clearLoadedStamp() {
   state.stampDataUrl = null;
+  state.stampFileName = null;
   state.stampAspect = 1;
   els.stampInput.value = "";
   if (els.stampDropText) {
     els.stampDropText.textContent = "Select Stamp";
   }
   syncAssetClearButtons();
+  syncAssetsCacheIfEnabled();
   refreshPreviews();
   setUiStatus("Stamp removed.");
 }
 
 function clearLoadedEsign() {
   state.signDataUrl = null;
+  state.signFileName = null;
+  state.signSource = null;
   state.signAspect = 0.375;
   state.signWidthScale = 1;
   els.esignInput.value = "";
@@ -230,6 +477,7 @@ function clearLoadedEsign() {
     els.esignDropText.textContent = "Select E-sign";
   }
   syncAssetClearButtons();
+  syncAssetsCacheIfEnabled();
   refreshPreviews();
   setUiStatus("E-sign attachment removed.");
 }
@@ -670,6 +918,64 @@ function bindEvents() {
   signInputSwitcherApi = initSignInputSwitcher();
   let stageScrollRafId = null;
 
+  const closeSettingsMenu = () => {
+    if (!els.settingsMenu || !els.settingsBtn) {
+      return;
+    }
+
+    els.settingsMenu.hidden = true;
+    els.settingsBtn.setAttribute("aria-expanded", "false");
+  };
+
+  const openSettingsMenu = () => {
+    if (!els.settingsMenu || !els.settingsBtn) {
+      return;
+    }
+
+    els.settingsMenu.hidden = false;
+    els.settingsBtn.setAttribute("aria-expanded", "true");
+  };
+
+  const toggleSettingsMenu = () => {
+    if (!els.settingsMenu || !els.settingsBtn) {
+      return;
+    }
+
+    if (els.settingsMenu.hidden) {
+      openSettingsMenu();
+      return;
+    }
+
+    closeSettingsMenu();
+  };
+
+  els.settingsBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleSettingsMenu();
+  });
+
+  els.settingsMenu?.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  els.saveAssetsCacheSwitch?.addEventListener("change", async () => {
+    if (!els.saveAssetsCacheSwitch) {
+      return;
+    }
+
+    if (els.saveAssetsCacheSwitch.checked) {
+      await saveCurrentAssetsToCache();
+      return;
+    }
+
+    await clearCachedUserAssets();
+    els.saveAssetsCacheSwitch.checked = false;
+  });
+
+  window.addEventListener("click", () => {
+    closeSettingsMenu();
+  });
+
   els.pdfInput.addEventListener("change", async (event) => {
     setViewportLoader(true, "Loading PDF...");
     try {
@@ -703,18 +1009,22 @@ function bindEvents() {
 
   els.stampInput.addEventListener("change", async (event) => {
     try {
+      const selectedName = event.target.files?.[0]?.name || null;
       state.stampDataUrl = await readPngAsDataUrl(
         event.target.files?.[0],
         "Stamp",
       );
+      state.stampFileName = selectedName;
       if (els.stampDropText) {
-        els.stampDropText.textContent = event.target.files?.[0]?.name || "Select Stamp";
+        els.stampDropText.textContent = selectedName || "Select Stamp";
       }
       state.stampAspect = await getImageAspect(state.stampDataUrl);
+      await syncAssetsCacheIfEnabled();
       refreshPreviews();
       setUiStatus("Stamp PNG loaded.", true);
     } catch (error) {
       setUiStatus(error.message);
+      state.stampFileName = null;
       if (!event.target.files?.[0] && els.stampDropText) {
         els.stampDropText.textContent = "Select Stamp";
       }
@@ -725,22 +1035,28 @@ function bindEvents() {
 
   els.esignInput.addEventListener("change", async (event) => {
     try {
+      const selectedName = event.target.files?.[0]?.name || null;
       const rawSignDataUrl = await readPngAsDataUrl(
         event.target.files?.[0],
         "E-sign",
       );
+      state.signFileName = selectedName;
+      state.signSource = "attachment";
       if (els.esignDropText) {
-        els.esignDropText.textContent = event.target.files?.[0]?.name || "Select E-sign";
+        els.esignDropText.textContent = selectedName || "Select E-sign";
       }
       const trimmedSign = await trimTransparentPng(rawSignDataUrl);
       state.signDataUrl = trimmedSign.dataUrl;
       state.signAspect = trimmedSign.aspect;
       state.signWidthScale = trimmedSign.widthScale;
+      await syncAssetsCacheIfEnabled();
       signInputSwitcherApi?.setMode("attachment");
       refreshPreviews();
       setUiStatus("E-sign PNG loaded and trimmed.", true);
     } catch (error) {
       setUiStatus(error.message);
+      state.signFileName = null;
+      state.signSource = null;
       if (!event.target.files?.[0] && els.esignDropText) {
         els.esignDropText.textContent = "Select E-sign";
       }
@@ -973,6 +1289,7 @@ function bindEvents() {
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      closeSettingsMenu();
       els.composerModal.classList.add("hidden");
     }
   });
@@ -1005,7 +1322,11 @@ function bindEvents() {
   });
 
   els.exportBtn.addEventListener("click", async () => {
-    setViewportLoader(true, "Preparing export...");
+    if (isExporting) {
+      return;
+    }
+
+    setExportLoading(true);
     try {
       await exportMarkedPdf({
         state,
@@ -1023,10 +1344,23 @@ function bindEvents() {
         error instanceof Error ? error.message : "Unknown export error";
       setUiStatus(`Could not export PDF. ${message}`);
     } finally {
-      setViewportLoader(false);
+      setExportLoading(false);
     }
   });
 }
+
+void hasAnyCachedUserAssets().then((hasCached) => {
+  const switchEl = els.saveAssetsCacheSwitch;
+  if (!switchEl) {
+    return;
+  }
+
+  switchEl.checked = true;
+
+  if (!hasCached) {
+    return;
+  }
+});
 
 setupDropzone();
 hydrateToolbarIcons();
@@ -1067,14 +1401,18 @@ signaturePadApi = initSignaturePad({
   onUseDrawing: (drawingDataUrl) => {
     trimTransparentPng(drawingDataUrl).then((trimmedSign) => {
       state.signDataUrl = trimmedSign.dataUrl;
+      state.signFileName = "Signature Drawing";
+      state.signSource = "drawing";
       state.signAspect = trimmedSign.aspect;
       state.signWidthScale = trimmedSign.widthScale;
+      syncAssetsCacheIfEnabled();
       signInputSwitcherApi?.setMode("drawing");
       refreshPreviews();
     });
   },
 });
 bindEvents();
+void restoreCachedAssetsToState();
 viewer.renderA4Placeholder();
 initAssetSwitcher();
 syncStyleControlsUi();
